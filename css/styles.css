@@ -110,6 +110,14 @@ body {
   font-size: 18px;
 }
 
+.logo-image {
+  height: 42px;
+  width: auto;
+  max-width: 150px;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+}
+
 .company-name {
   font-size: 13px;
   color: var(--gray-500);

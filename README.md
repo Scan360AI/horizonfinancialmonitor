@@ -142,7 +142,22 @@ Entrambe caricate via CDN - nessuna installazione richiesta.
 - Immagini e risorse minimizzate
 - Caricamento veloce
 
-## 🔧 Personalizzazione
+## 🎨 Personalizzazione
+
+### Logo Aziendale
+
+Il report include un logo placeholder che puoi sostituire con il tuo:
+
+**Posizione**: `assets/images/logo.png` o `logo.svg`
+
+**Dimensioni consigliate**:
+- Formato: PNG con trasparenza o SVG
+- Dimensioni: 120x120px (quadrato 1:1)
+- Alternative: 150x150px o 200x200px  
+- Risoluzione: 144 DPI per Retina
+- Peso: < 100 KB
+
+📖 **Istruzioni complete**: Consulta `assets/images/README-LOGO.md`
 
 ### Colori
 Modificare le variabili CSS in `css/styles.css`:

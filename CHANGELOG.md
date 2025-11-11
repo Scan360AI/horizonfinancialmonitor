@@ -1,5 +1,62 @@
 # Changelog - Bug Fixes
 
+## Versione 1.3 (11 Novembre 2025) - LOGO HORIZON INSTALLATO
+
+### 🎨 Logo Aziendale Horizon Financial Monitor
+
+#### Logo Reale Installato ✅
+- ✅ Logo Horizon caricato e ottimizzato
+- ✅ Versione sidebar: 200x120px (13KB)
+- ✅ Versione header: 300x180px (22KB)
+- ✅ Formato PNG con trasparenza
+- ✅ Proporzioni 1.65:1 (orizzontale) mantenute
+- ✅ CSS ottimizzato per logo non quadrato
+- ✅ Integrato in tutte le 6 pagine
+
+**File**:
+- `assets/images/logo.png` - Sidebar (tutte le pagine)
+- `assets/images/logo-large.png` - Header aziendale (Profilo Aziendale)
+
+---
+
+## Versione 1.2 (11 Novembre 2025)
+
+### 🎨 Nuove Funzionalità
+
+#### Logo Aziendale
+- ✅ Aggiunta cartella `assets/images/` per il logo
+- ✅ Logo placeholder SVG incluso (120x120px)
+- ✅ Logo integrato in sidebar (tutte le pagine)
+- ✅ Logo integrato nell'header aziendale (Profilo Aziendale)
+- ✅ Documentazione completa per sostituire il logo
+- **File**: `assets/images/README-LOGO.md`
+
+### 🐛 Bug Corretti
+
+#### 3. stato-patrimoniale.html - Calcolo DSCR
+**Problema**: Dettaglio calcolo DSCR non visualizzato
+- ❌ Cercava `dscrData.components`
+- ✅ Corretto in `dscrData.values`
+- **Causa**: Nome proprietà JSON errato
+- **Effetto**: Ora mostra formula, valori, assunzioni e risultato completo
+
+### 📐 Specifiche Logo
+
+**Dimensioni Consigliate**:
+- Formato: PNG con trasparenza (o SVG)
+- Dimensioni: 120x120px (quadrato 1:1)
+- Alternative: 150x150px o 200x200px
+- Risoluzione: 144 DPI per Retina
+- Peso: < 100 KB (ideale < 50 KB)
+
+**Posizione File**:
+```
+assets/images/logo.png  (sostituire questo)
+assets/images/logo.svg  (alternativa vettoriale)
+```
+
+---
+
 ## Versione 1.1 (11 Novembre 2025)
 
 ### 🐛 Bug Corretti
@@ -28,7 +85,7 @@
 
 ### 📦 File Aggiornati
 
-- `pages/stato-patrimoniale.html` - Fix riferimento dati
+- `pages/stato-patrimoniale.html` - Fix riferimento dati + Fix DSCR
 - `pages/profilo-aziendale.html` - Fix forEach duplicato
 
 ### 🚀 Deploy
