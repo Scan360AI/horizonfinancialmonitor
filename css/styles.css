@@ -89,12 +89,11 @@ body {
 .logo {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-sm);
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--primary-dark);
   text-decoration: none;
-  margin-bottom: var(--space-xs);
+  margin-bottom: var(--space-lg);
+  padding: var(--space-md) 0;
 }
 
 .logo-icon {
@@ -111,9 +110,9 @@ body {
 }
 
 .logo-image {
-  height: 42px;
+  height: 48px;
   width: auto;
-  max-width: 150px;
+  max-width: 220px;
   object-fit: contain;
   border-radius: var(--radius-sm);
 }

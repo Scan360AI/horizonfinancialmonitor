@@ -1,5 +1,20 @@
 # Changelog - Bug Fixes
 
+## Versione 1.4 (11 Novembre 2025) - LOGO PULITO
+
+### 🎨 Logo Horizon - Solo Immagine
+
+#### Modifiche Layout Sidebar ✅
+- ✅ Rimosso testo "Financial Report" accanto al logo
+- ✅ Rimosso "KITZANOS SOC COOP" sotto il logo
+- ✅ Logo Horizon centrato e più grande (48px altezza, max 220px larghezza)
+- ✅ Sidebar pulita con solo logo e menu navigazione
+- ✅ Applicato a tutte le 6 pagine
+
+**Risultato**: Logo Horizon Financial Monitor standalone in sidebar
+
+---
+
 ## Versione 1.3 (11 Novembre 2025) - LOGO HORIZON INSTALLATO
 
 ### 🎨 Logo Aziendale Horizon Financial Monitor
