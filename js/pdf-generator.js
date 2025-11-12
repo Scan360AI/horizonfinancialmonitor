@@ -120,19 +120,25 @@ class PDFGenerator {
 
       // Create temporary container with proper visibility for height calculation
       const tempDiv = document.createElement('div');
-      tempDiv.style.position = 'absolute';
+      tempDiv.style.position = 'fixed';  // Changed to fixed to maintain layout
       tempDiv.style.left = '0';
       tempDiv.style.top = '0';
-      tempDiv.style.width = '210mm';  // A4 width
-      tempDiv.style.visibility = 'hidden';  // Hidden but still takes up space for height calculation
-      tempDiv.style.overflow = 'hidden';
+      tempDiv.style.width = '794px';  // A4 width in pixels at 96 DPI
+      tempDiv.style.backgroundColor = 'white';
+      tempDiv.style.zIndex = '-1000';  // Behind everything
       tempDiv.innerHTML = htmlContent;
       document.body.appendChild(tempDiv);
 
       // Wait for browser to calculate dimensions
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 200));
 
-      console.log('📐 Temp div dimensions:', tempDiv.offsetWidth, 'x', tempDiv.offsetHeight);
+      const calculatedHeight = tempDiv.offsetHeight;
+      console.log('📐 Temp div dimensions:', tempDiv.offsetWidth, 'x', calculatedHeight);
+
+      // Force explicit height after calculation
+      tempDiv.style.height = calculatedHeight + 'px';
+
+      console.log('📐 Forced height to:', tempDiv.style.height);
 
       const companyNameSlug = this.data.company.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
       const filename = 'report-' + companyNameSlug + '-' + this.getCurrentDate() + '.pdf';
@@ -145,7 +151,11 @@ class PDFGenerator {
           scale: 2,
           logging: true,
           useCORS: true,
-          allowTaint: true
+          allowTaint: true,
+          width: 794,
+          height: calculatedHeight,
+          windowWidth: 794,
+          windowHeight: calculatedHeight
         },
         jsPDF: {
           unit: 'mm',
