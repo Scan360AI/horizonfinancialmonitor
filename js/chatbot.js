@@ -624,6 +624,7 @@ Usa formato Markdown (##, **, -, ecc.)`;
         let chapterContent;
         try {
           chapterContent = await this.callGeminiAPI(chapterPrompt);
+          chapterContent = this.cleanAIResponse(chapterContent); // Pulizia frasi introduttive
           console.log(`✅ Capitolo ${i+1} generato (${chapterContent.length} caratteri)`);
         } catch (chapterError) {
           console.error(`❌ Errore generazione capitolo ${i+1}:`, chapterError);
@@ -643,11 +644,14 @@ Usa formato Markdown (##, **, -, ecc.)`;
         throw new Error('Nessun contenuto generato per la nota');
       }
 
-      // Step 3: Genera PDF
-      this.addMessage('bot', '📄 **Step 3/3:** Generazione PDF...');
+      // Step 3: Genera grafici e PDF
+      this.addMessage('bot', '📊 **Step 3/4:** Generazione grafici...');
+      const chartImages = await this.generateChartImages();
+
+      this.addMessage('bot', '📄 **Step 4/4:** Generazione PDF...');
 
       const pdfGen = new PDFGenerator(this.financialData);
-      await pdfGen.generateCustomNote(fullContent, noteTitle);
+      await pdfGen.generateCustomNote(fullContent, noteTitle, chartImages);
 
       this.addMessage('bot', `✅ **Nota completata con successo!**\n\nLa nota "${noteTitle}" è stata generata con ${indexLines.length} capitoli sviluppati e scaricata in formato PDF.`);
 
@@ -703,6 +707,7 @@ Usa formato Markdown (##, **, -, ecc.)`;
         let sectionContent;
         try {
           sectionContent = await this.callGeminiAPI(sectionPrompt);
+          sectionContent = this.cleanAIResponse(sectionContent); // Pulizia frasi introduttive
           console.log(`✅ Sezione ${i+1} generata: ${sectionTitle} (${sectionContent.length} caratteri)`);
         } catch (sectionError) {
           console.error(`❌ Errore generazione sezione ${i+1}:`, sectionError);
@@ -722,11 +727,15 @@ Usa formato Markdown (##, **, -, ecc.)`;
         throw new Error('Nessun contenuto generato per il report');
       }
 
+      // Genera grafici
+      this.addMessage('bot', '📊 **Generazione grafici...**');
+      const chartImages = await this.generateChartImages();
+
       // Genera PDF
       this.addMessage('bot', '📄 **Generazione PDF finale...**');
 
       const pdfGen = new PDFGenerator(this.financialData);
-      await pdfGen.generateCustomNote(fullContent, reportTitle);
+      await pdfGen.generateCustomNote(fullContent, reportTitle, chartImages);
 
       this.addMessage('bot', `✅ **Report Completo generato con successo!**\n\nIl report AI-powered "${reportTitle}" è stato scaricato con ${predefinedIndex.length} sezioni complete:\n\n${predefinedIndex.map((s, i) => `${i+1}. ${s}`).join('\n')}`);
 
@@ -735,6 +744,35 @@ Usa formato Markdown (##, **, -, ecc.)`;
       console.error('Stack trace:', error.stack);
       this.addMessage('bot', `❌ **Errore durante la generazione del report**\n\n${error.message}\n\n💡 Suggerimento: Prova a:\n- Verificare la connessione internet\n- Controllare la console del browser (F12) per dettagli\n- Riprovare tra qualche secondo`);
     }
+  }
+
+  cleanAIResponse(text) {
+    // Rimuove frasi introduttive comuni dall'AI
+    const introPatterns = [
+      /^Certamente[!.]?\s*/i,
+      /^Ecco\s+(la\s+sezione|il\s+capitolo|l'analisi)[^.!?]*[.!?]\s*/i,
+      /^Analizziamo\s+[^.!?]*[.!?]\s*/i,
+      /^Vediamo\s+[^.!?]*[.!?]\s*/i,
+      /^Iniziamo\s+[^.!?]*[.!?]\s*/i,
+      /^Procediamo\s+[^.!?]*[.!?]\s*/i,
+      /^Perfetto[!.]?\s*/i,
+      /^Bene[!.]?\s*/i,
+      /^Ok[!.]?\s*/i,
+      /^Certo[!.]?\s*/i,
+      /^Assolutamente[!.]?\s*/i
+    ];
+
+    let cleaned = text.trim();
+
+    // Applica tutti i pattern
+    for (const pattern of introPatterns) {
+      cleaned = cleaned.replace(pattern, '');
+    }
+
+    // Rimuove riferimenti al titolo della sezione all'inizio
+    cleaned = cleaned.replace(/^(La sezione|Il capitolo|Questa sezione)\s+"[^"]+"\s+(analizza|descrive|presenta|illustra)[^.!?]*[.!?]\s*/i, '');
+
+    return cleaned.trim();
   }
 
   buildSectionPrompt(sectionTitle) {
@@ -750,10 +788,15 @@ Usa formato Markdown (##, **, -, ecc.)`;
 Usa formato Markdown con:
 - **Grassetti** per dati chiave
 - Liste puntate per enumerare elementi
+- Tabelle markdown per dati comparativi (es: | Anno | Valore | Trend |)
 - Linguaggio professionale ma chiaro
 - Riferimenti specifici ai dati forniti
 
-Scrivi 3-5 paragrafi ben strutturati.`;
+IMPORTANTE:
+- NON includere frasi introduttive come "Certamente", "Ecco", "Analizziamo", etc.
+- Inizia DIRETTAMENTE con il contenuto della sezione
+- NON ripetere il titolo della sezione nel testo
+- Scrivi 3-5 paragrafi ben strutturati`;
 
     // Prompt specifici per ogni sezione
     switch(sectionTitle) {
@@ -885,6 +928,114 @@ Sviluppa questa sezione in modo professionale e dettagliato basandoti sui dati f
 
     // Default
     return 'Nota Finanziaria';
+  }
+
+  async generateChartImages() {
+    // Genera grafici come Base64 per inserirli nei PDF
+    if (!this.financialData || !this.financialData.charts) {
+      console.warn('⚠️ Dati grafici non disponibili');
+      return null;
+    }
+
+    const charts = {};
+
+    try {
+      // 1. Economic Trend Chart (Ricavi/EBITDA)
+      if (this.financialData.charts.economicTrend) {
+        charts.economicTrend = await this.createChartImage('line', this.financialData.charts.economicTrend, 600, 350);
+      }
+
+      // 2. Debt Sustainability Chart
+      if (this.financialData.charts.debtSustainability) {
+        charts.debtSustainability = await this.createChartImage('bar', this.financialData.charts.debtSustainability, 600, 300);
+      }
+
+      // 3. Working Capital Chart
+      if (this.financialData.charts.workingCapital) {
+        charts.workingCapital = await this.createChartImage('bar', this.financialData.charts.workingCapital, 600, 300);
+      }
+
+      // 4. Stress Test Chart
+      if (this.financialData.charts.stressTest) {
+        charts.stressTest = await this.createChartImage('line', this.financialData.charts.stressTest, 600, 300);
+      }
+
+      // 5. Benchmark Radar Chart
+      if (this.financialData.charts.benchmarkRadar) {
+        charts.benchmarkRadar = await this.createChartImage('radar', this.financialData.charts.benchmarkRadar, 400, 400);
+      }
+
+      console.log('📊 Grafici generati:', Object.keys(charts));
+      return charts;
+
+    } catch (error) {
+      console.error('❌ Errore generazione grafici:', error);
+      return null;
+    }
+  }
+
+  async createChartImage(type, data, width, height) {
+    return new Promise((resolve) => {
+      // Crea canvas temporaneo invisibile
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      canvas.style.display = 'none';
+      document.body.appendChild(canvas);
+
+      // Configurazione base chart
+      const config = {
+        type: type,
+        data: data,
+        options: {
+          responsive: false,
+          animation: false, // No animation per export
+          plugins: {
+            legend: {
+              position: 'top',
+              labels: {
+                font: { size: 11 },
+                boxWidth: 12,
+                padding: 15
+              }
+            }
+          }
+        }
+      };
+
+      // Opzioni specifiche per tipo
+      if (type === 'line') {
+        config.data.datasets = data.datasets.map(ds => ({
+          ...ds,
+          fill: false,
+          tension: 0.4,
+          borderWidth: 3,
+          pointRadius: 4
+        }));
+      }
+
+      if (type === 'radar') {
+        config.options.scales = {
+          r: {
+            beginAtZero: true,
+            max: 5,
+            ticks: { stepSize: 1, font: { size: 10 } },
+            pointLabels: { font: { size: 11 } }
+          }
+        };
+      }
+
+      // Crea chart
+      const chart = new Chart(canvas, config);
+
+      // Attendi rendering e converti in Base64
+      setTimeout(() => {
+        const base64 = canvas.toDataURL('image/png');
+        chart.destroy();
+        document.body.removeChild(canvas);
+        resolve(base64);
+      }, 500);
+    });
   }
 
   parseMarkdown(text) {

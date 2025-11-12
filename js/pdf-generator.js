@@ -189,7 +189,7 @@ class PDFGenerator {
   /**
    * Genera nota personalizzata basata su conversazione
    */
-  async generateCustomNote(noteContent, noteTitle) {
+  async generateCustomNote(noteContent, noteTitle, chartImages = null) {
     if (!this.data) {
       alert('Dati finanziari non disponibili');
       return;
@@ -226,61 +226,121 @@ class PDFGenerator {
       },
 
       content: [
-        // Header con logo
-        this.logoBase64 ? { image: this.logoBase64, width: 120, margin: [0, 0, 0, 20] } : {},
-        { text: noteTitle || 'Nota Finanziaria', style: 'h1' },
-        { text: this.data.company.name, style: 'coverSubtitle', margin: [0, 0, 0, 30] },
+        // Cover box elegante
+        {
+          columns: [
+            this.logoBase64 ? { image: this.logoBase64, width: 100 } : {},
+            {
+              width: '*',
+              stack: [
+                { text: noteTitle || 'Nota Finanziaria', style: 'h1', margin: [0, 10, 0, 5] },
+                { text: this.data.company.name, style: 'coverSubtitle' },
+                {
+                  text: new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' }),
+                  fontSize: 10,
+                  color: '#94a3b8',
+                  margin: [0, 8, 0, 0]
+                }
+              ]
+            }
+          ],
+          margin: [0, 0, 0, 25]
+        },
+        // Linea separatore elegante
+        {
+          canvas: [{
+            type: 'rect',
+            x: 0,
+            y: 0,
+            w: 515,
+            h: 3,
+            r: 2,
+            color: '#3b82f6'
+          }],
+          margin: [0, 0, 0, 30]
+        },
 
-        // Contenuto della nota (convertito da markdown)
-        ...this.parseMarkdownToPDFContent(noteContent),
+        // Contenuto della nota (convertito da markdown con grafici)
+        ...this.parseMarkdownToPDFContent(noteContent, chartImages),
 
-        // Disclaimer
+        // Disclaimer elegante
         { text: '', margin: [0, 40, 0, 0] },
         {
-          text: 'Disclaimer',
-          style: 'h3',
-          margin: [0, 20, 0, 8]
-        },
-        {
-          text: 'Questo documento è stato generato automaticamente da un assistente AI basato sui dati finanziari disponibili. Le informazioni contenute sono fornite a scopo informativo e non costituiscono consulenza finanziaria professionale.',
-          fontSize: 8,
-          color: '#64748b',
-          italics: true
+          stack: [
+            {
+              text: [
+                { text: '⚠️  ', fontSize: 12 },
+                { text: 'Disclaimer', bold: true, fontSize: 10 }
+              ],
+              margin: [0, 0, 0, 8],
+              color: '#64748b'
+            },
+            {
+              text: 'Questo documento è stato generato automaticamente da un assistente AI basato sui dati finanziari disponibili. Le informazioni contenute sono fornite a scopo informativo e non costituiscono consulenza finanziaria professionale.',
+              fontSize: 9,
+              color: '#64748b',
+              italics: true,
+              lineHeight: 1.4
+            }
+          ],
+          background: '#f8fafc',
+          fillColor: '#f8fafc',
+          margin: [0, 0, 0, 0],
+          padding: [12, 12, 12, 12]
         }
       ],
 
       styles: {
         h1: {
-          fontSize: 24,
+          fontSize: 26,
           bold: true,
-          color: '#2f3e9e',
-          margin: [0, 0, 0, 12]
+          color: '#1e293b',
+          margin: [0, 0, 0, 16],
+          decoration: 'underline',
+          decorationStyle: 'solid',
+          decorationColor: '#3b82f6'
         },
         h2: {
-          fontSize: 18,
+          fontSize: 19,
           bold: true,
-          color: '#2f3e9e',
-          margin: [0, 16, 0, 10]
+          color: '#0f172a',
+          margin: [0, 20, 0, 12],
+          background: '#f1f5f9',
+          fillColor: '#f1f5f9'
         },
         h3: {
-          fontSize: 14,
+          fontSize: 15,
           bold: true,
-          color: '#475569',
-          margin: [0, 12, 0, 8]
+          color: '#334155',
+          margin: [0, 14, 0, 10]
         },
         coverSubtitle: {
-          fontSize: 14,
-          color: '#64748b'
+          fontSize: 16,
+          color: '#64748b',
+          margin: [0, 5, 0, 0]
         },
         headerText: {
           fontSize: 9,
-          color: '#64748b'
+          color: '#94a3b8'
+        },
+        tableHeader: {
+          bold: true,
+          fontSize: 11,
+          color: 'white',
+          fillColor: '#3b82f6',
+          alignment: 'left'
+        },
+        normal: {
+          fontSize: 11,
+          lineHeight: 1.6,
+          color: '#334155'
         }
       },
 
       defaultStyle: {
-        fontSize: 10,
-        lineHeight: 1.5
+        fontSize: 11,
+        lineHeight: 1.6,
+        color: '#1e293b'
       }
     };
 
@@ -664,12 +724,15 @@ class PDFGenerator {
     };
   }
 
-  parseMarkdownToPDFContent(markdown) {
-    // Parser markdown avanzato -> pdfmake content con formattazione corretta
+  parseMarkdownToPDFContent(markdown, chartImages = null) {
+    // Parser markdown avanzato -> pdfmake content con formattazione corretta + grafici
     const lines = markdown.split('\n');
     const content = [];
     let inList = false;
     let listItems = [];
+    let inTable = false;
+    let tableLines = [];
+    let lastH2Title = null; // Traccia ultimo H2 per inserire grafici
 
     const parseInlineFormatting = (text) => {
       // Converti markdown inline in array di text objects pdfmake
@@ -707,12 +770,117 @@ class PDFGenerator {
       }
     };
 
+    const flushTable = () => {
+      if (tableLines.length > 0) {
+        // Parse markdown table
+        const rows = tableLines.filter(line => !line.match(/^\|[\s-:|]+\|$/)); // Rimuovi separator row
+
+        if (rows.length > 0) {
+          const tableBody = rows.map((row, index) => {
+            const cells = row
+              .split('|')
+              .slice(1, -1) // Rimuovi | iniziale e finale
+              .map(cell => cell.trim());
+
+            return cells.map(cell => ({
+              text: parseInlineFormatting(cell),
+              style: index === 0 ? 'tableHeader' : 'normal',
+              margin: [5, 5, 5, 5]
+            }));
+          });
+
+          content.push({
+            table: {
+              headerRows: 1,
+              widths: Array(tableBody[0]?.length || 1).fill('*'),
+              body: tableBody
+            },
+            layout: {
+              fillColor: (rowIndex) => (rowIndex === 0 ? '#3b82f6' : (rowIndex % 2 === 0 ? '#f8fafc' : null)),
+              hLineWidth: () => 0.5,
+              vLineWidth: () => 0.5,
+              hLineColor: () => '#e2e8f0',
+              vLineColor: () => '#e2e8f0'
+            },
+            margin: [0, 10, 0, 15]
+          });
+        }
+
+        tableLines = [];
+        inTable = false;
+      }
+    };
+
+    const insertChartIfNeeded = (sectionTitle) => {
+      if (!chartImages) return;
+
+      // Mapping sezioni -> grafici
+      const chartMapping = {
+        'analisi economica': 'economicTrend',
+        'economic': 'economicTrend',
+        'indicatori finanziari': ['debtSustainability', 'workingCapital'],
+        'financial indicators': ['debtSustainability', 'workingCapital'],
+        'stato patrimoniale': 'workingCapital',
+        'balance sheet': 'workingCapital',
+        'risk assessment': 'benchmarkRadar',
+        'valutazione rischio': 'benchmarkRadar',
+        'profili': 'benchmarkRadar',
+        'stress': 'stressTest',
+        'scenario': 'stressTest'
+      };
+
+      const titleLower = sectionTitle.toLowerCase();
+
+      for (const [key, chartKey] of Object.entries(chartMapping)) {
+        if (titleLower.includes(key)) {
+          // Se è un array, inserisci tutti i grafici
+          if (Array.isArray(chartKey)) {
+            chartKey.forEach(ck => {
+              if (chartImages[ck]) {
+                content.push({
+                  image: chartImages[ck],
+                  width: 480,
+                  alignment: 'center',
+                  margin: [0, 15, 0, 20]
+                });
+              }
+            });
+          } else {
+            // Singolo grafico
+            if (chartImages[chartKey]) {
+              content.push({
+                image: chartImages[chartKey],
+                width: chartKey === 'benchmarkRadar' ? 350 : 480,
+                alignment: 'center',
+                margin: [0, 15, 0, 20]
+              });
+            }
+          }
+          break;
+        }
+      }
+    };
+
     lines.forEach((line, index) => {
       const trimmed = line.trim();
+
+      // Rileva tabelle markdown (righe che iniziano con |)
+      if (trimmed.startsWith('|')) {
+        flushList();
+        inTable = true;
+        tableLines.push(trimmed);
+        return;
+      }
+
+      // Se eravamo in una tabella e la riga non è una tabella, flush
+      if (inTable && !trimmed.startsWith('|')) {
+        flushTable();
+      }
 
       // Linea vuota
       if (!trimmed) {
         flushList();
+        flushTable();
         if (content.length > 0) {
           content.push({ text: '', margin: [0, 5, 0, 5] });
         }
@@ -722,6 +890,7 @@ class PDFGenerator {
       // Headers H1
       if (trimmed.startsWith('# ') && !trimmed.startsWith('##')) {
         flushList();
+        flushTable();
         const headerText = trimmed.replace(/^#\s*/, '');
         content.push({
           text: parseInlineFormatting(headerText),
@@ -733,7 +902,16 @@ class PDFGenerator {
       // Headers H2
       if (trimmed.startsWith('## ') && !trimmed.startsWith('###')) {
         flushList();
+        flushTable();
+
+        // Se c'era un H2 precedente, inserisci grafico se appropriato
+        if (lastH2Title) {
+          insertChartIfNeeded(lastH2Title);
+        }
+
         const headerText = trimmed.replace(/^##\s*/, '');
+        lastH2Title = headerText; // Traccia per prossimo inserimento
+
         content.push({
           text: parseInlineFormatting(headerText),
           style: 'h2'
@@ -744,6 +922,7 @@ class PDFGenerator {
       // Headers H3
       if (trimmed.startsWith('### ') && !trimmed.startsWith('####')) {
         flushList();
+        flushTable();
         const headerText = trimmed.replace(/^###\s*/, '');
         content.push({
           text: parseInlineFormatting(headerText),
@@ -755,6 +934,7 @@ class PDFGenerator {
       // Headers H4
       if (trimmed.startsWith('#### ')) {
         flushList();
+        flushTable();
         const headerText = trimmed.replace(/^####\s*/, '');
         content.push({
           text: parseInlineFormatting(headerText),
@@ -805,6 +985,7 @@ class PDFGenerator {
 
       // Paragrafo normale
       flushList();
+      flushTable();
       content.push({
         text: parseInlineFormatting(trimmed),
         margin: [0, 3, 0, 3],
@@ -812,8 +993,14 @@ class PDFGenerator {
       });
     });
 
-    // Flush lista finale se presente
+    // Flush finale se presente
     flushList();
+    flushTable();
+
+    // Inserisci grafico dell'ultima sezione se presente
+    if (lastH2Title) {
+      insertChartIfNeeded(lastH2Title);
+    }
 
     return content;
   }
