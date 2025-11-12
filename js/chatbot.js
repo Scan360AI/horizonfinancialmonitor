@@ -542,19 +542,84 @@ Ottima crescita, ma...
 
   async generateNoteFromConversation(userSpec, botResponse) {
     try {
-      // Crea il PDF Generator
-      const pdfGen = new PDFGenerator(this.financialData);
+      // Mostra feedback utente
+      this.addMessage('bot', '📝 **Generazione nota strutturata in corso...**\n\nSto creando una nota professionale multi-capitolo. Questo richiederà qualche secondo...');
 
-      // Determina il titolo dalla spec dell'utente
+      // Step 1: Genera indice
+      this.addMessage('bot', '🔍 **Step 1/3:** Creazione indice della nota...');
+
+      const indexPrompt = `Basandoti sulla richiesta dell'utente "${userSpec}" e sui dati finanziari di BFLOWS S.R.L., crea un indice strutturato per una nota professionale.
+
+L'indice deve avere 4-5 sezioni logiche e progressive. Rispondi SOLO con l'indice in questo formato:
+
+1. Titolo Prima Sezione
+2. Titolo Seconda Sezione
+3. Titolo Terza Sezione
+4. Titolo Quarta Sezione
+5. Titolo Quinta Sezione (opzionale)
+
+Esempio per "analisi liquidità":
+1. Situazione Attuale della Liquidità
+2. Analisi dei Flussi di Cassa
+3. Confronto con il Settore
+4. Criticità e Rischi
+5. Raccomandazioni Operative`;
+
+      const indexResponse = await this.callGeminiAPI(indexPrompt);
+      const indexLines = indexResponse.split('\n').filter(line => line.match(/^\d+\./));
+
+      if (indexLines.length === 0) {
+        throw new Error('Impossibile generare indice strutturato');
+      }
+
+      // Step 2: Sviluppa ogni capitolo
+      this.addMessage('bot', `✅ Indice creato con ${indexLines.length} sezioni\n\n📖 **Step 2/3:** Sviluppo capitoli...`);
+
+      let fullContent = '';
       const noteTitle = this.extractNoteTitleFromSpec(userSpec);
 
-      // Genera il PDF
-      await pdfGen.generateCustomNote(botResponse, noteTitle);
+      for (let i = 0; i < indexLines.length; i++) {
+        const chapterTitle = indexLines[i].replace(/^\d+\.\s*/, '');
 
-      this.addMessage('bot', '✅ Nota generata con successo! Il PDF è stato scaricato.');
+        // Feedback progresso
+        this.addMessage('bot', `⏳ Sviluppo capitolo ${i+1}/${indexLines.length}: *${chapterTitle}*`);
+
+        const chapterPrompt = `Sviluppa il seguente capitolo per una nota finanziaria professionale su BFLOWS S.R.L.
+
+**Capitolo:** ${chapterTitle}
+**Contesto:** ${userSpec}
+**Azienda:** BFLOWS S.R.L. - Settore IT, Ricavi €197.250 (+839% vs 2023), EBITDA negativo -€98.912, Rating C1
+
+Scrivi 2-4 paragrafi dettagliati per questo capitolo. Usa:
+- **Grassetti** per evidenziare dati importanti
+- Liste puntate per enumerare punti chiave
+- Riferimenti specifici ai dati finanziari
+- Linguaggio professionale ma chiaro
+
+Usa formato Markdown (##, **, -, ecc.)`;
+
+        const chapterContent = await this.callGeminiAPI(chapterPrompt);
+
+        // Assembla contenuto
+        fullContent += `\n\n## ${chapterTitle}\n\n${chapterContent}\n`;
+
+        // Piccola pausa per evitare rate limit
+        if (i < indexLines.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+
+      // Step 3: Genera PDF
+      this.addMessage('bot', '📄 **Step 3/3:** Generazione PDF...');
+
+      const pdfGen = new PDFGenerator(this.financialData);
+      await pdfGen.generateCustomNote(fullContent, noteTitle);
+
+      this.addMessage('bot', `✅ **Nota completata con successo!**\n\nLa nota "${noteTitle}" è stata generata con ${indexLines.length} capitoli sviluppati e scaricata in formato PDF.`);
+
     } catch (error) {
       console.error('Errore generazione nota:', error);
-      this.addMessage('bot', '❌ Errore durante la generazione del PDF. Controlla la console per dettagli.');
+      this.addMessage('bot', `❌ Errore durante la generazione della nota: ${error.message}\n\nRiprova o chiedi una nota più semplice.`);
     }
   }
 

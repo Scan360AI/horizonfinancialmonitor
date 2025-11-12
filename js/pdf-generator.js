@@ -37,76 +37,82 @@ class PDFGenerator {
       return;
     }
 
-    // Carica logo
-    this.logoBase64 = await this.loadLogo();
+    try {
+      // Carica logo (opzionale, se fallisce continua)
+      try {
+        this.logoBase64 = await this.loadLogo();
+      } catch (logoError) {
+        console.warn('Logo non caricato:', logoError);
+        this.logoBase64 = null;
+      }
 
-    // Genera grafici come immagini
-    const chartImages = await this.generateChartImages();
+      // Genera grafici come immagini
+      const chartImages = await this.generateChartImages();
 
-    // Definizione documento PDF
-    const docDefinition = {
-      info: {
-        title: `Report Finanziario - ${this.data.company.name}`,
-        author: 'Horizon Financial Monitor',
-        subject: 'Analisi Finanziaria Completa',
-        keywords: 'financial report, analisi finanziaria, bilancio',
-        creator: 'Horizon Financial Monitor',
-        producer: 'pdfmake'
-      },
-      pageSize: 'A4',
-      pageMargins: [40, 60, 40, 60],
-
-      header: (currentPage, pageCount) => {
-        if (currentPage === 1) return null;
-        return {
-          margin: [40, 20, 40, 0],
-          columns: [
-            { text: 'Horizon Financial Monitor', style: 'headerText' },
-            { text: `Pagina ${currentPage} di ${pageCount}`, style: 'headerText', alignment: 'right' }
-          ]
-        };
-      },
-
-      footer: (currentPage, pageCount) => {
-        return {
-          margin: [40, 0, 40, 20],
-          columns: [
-            { text: `Report generato il ${this.data.reportInfo.date}`, fontSize: 8, color: '#64748b' },
-            { text: 'Riservato e Confidenziale', fontSize: 8, color: '#64748b', alignment: 'right' }
-          ]
-        };
-      },
-
-      content: [
-        ...this.generateCoverPage(),
-        { text: '', pageBreak: 'after' },
-        ...this.generateTableOfContents(),
-        { text: '', pageBreak: 'after' },
-        ...this.generateExecutiveSummary(),
-        { text: '', pageBreak: 'after' },
-        ...this.generateCompanyProfile(),
-        { text: '', pageBreak: 'after' },
-        ...this.generateEconomicAnalysis(chartImages),
-        { text: '', pageBreak: 'after' },
-        ...this.generateBalanceSheet(),
-        { text: '', pageBreak: 'after' },
-        ...this.generateFinancialIndicators(),
-        { text: '', pageBreak: 'after' },
-        ...this.generateRiskAssessment(chartImages),
-        { text: '', pageBreak: 'after' },
-        ...this.generateCrisisCode(),
-        { text: '', pageBreak: 'after' },
-        ...this.generateRecommendations()
-      ],
-
-      styles: {
-        coverTitle: {
-          fontSize: 32,
-          bold: true,
-          color: '#2f3e9e',
-          margin: [0, 20, 0, 10]
+      // Definizione documento PDF
+      const docDefinition = {
+        info: {
+          title: `Report Finanziario - ${this.data.company.name}`,
+          author: 'Horizon Financial Monitor',
+          subject: 'Analisi Finanziaria Completa',
+          keywords: 'financial report, analisi finanziaria, bilancio',
+          creator: 'Horizon Financial Monitor',
+          producer: 'pdfmake'
         },
-        coverSubtitle: {
+        pageSize: 'A4',
+        pageMargins: [40, 60, 40, 60],
+
+        header: (currentPage, pageCount) => {
+          if (currentPage === 1) return null;
+          return {
+            margin: [40, 20, 40, 0],
+            columns: [
+              { text: 'Horizon Financial Monitor', style: 'headerText' },
+              { text: `Pagina ${currentPage} di ${pageCount}`, style: 'headerText', alignment: 'right' }
+            ]
+          };
+        },
+
+        footer: (currentPage, pageCount) => {
+          return {
+            margin: [40, 0, 40, 20],
+            columns: [
+              { text: `Report generato il ${this.data.reportInfo.date}`, fontSize: 8, color: '#64748b' },
+              { text: 'Riservato e Confidenziale', fontSize: 8, color: '#64748b', alignment: 'right' }
+            ]
+          };
+        },
+
+        content: [
+          ...this.generateCoverPage(),
+          { text: '', pageBreak: 'after' },
+          ...this.generateTableOfContents(),
+          { text: '', pageBreak: 'after' },
+          ...this.generateExecutiveSummary(),
+          { text: '', pageBreak: 'after' },
+          ...this.generateCompanyProfile(),
+          { text: '', pageBreak: 'after' },
+          ...this.generateEconomicAnalysis(chartImages),
+          { text: '', pageBreak: 'after' },
+          ...this.generateBalanceSheet(),
+          { text: '', pageBreak: 'after' },
+          ...this.generateFinancialIndicators(),
+          { text: '', pageBreak: 'after' },
+          ...this.generateRiskAssessment(chartImages),
+          { text: '', pageBreak: 'after' },
+          ...this.generateCrisisCode(),
+          { text: '', pageBreak: 'after' },
+          ...this.generateRecommendations()
+        ],
+
+        styles: {
+          coverTitle: {
+            fontSize: 32,
+            bold: true,
+            color: '#2f3e9e',
+            margin: [0, 20, 0, 10]
+          },
+          coverSubtitle: {
           fontSize: 18,
           color: '#64748b',
           margin: [0, 0, 0, 40]
@@ -169,8 +175,15 @@ class PDFGenerator {
       }
     };
 
-    // Genera e scarica PDF
-    pdfMake.createPdf(docDefinition).download(`report-${this.data.company.name}-${this.getCurrentDate()}.pdf`);
+      // Genera e scarica PDF
+      console.log('📄 Generazione PDF in corso...');
+      pdfMake.createPdf(docDefinition).download(`report-${this.data.company.name}-${this.getCurrentDate()}.pdf`);
+      console.log('✅ PDF generato con successo!');
+
+    } catch (error) {
+      console.error('❌ Errore generazione report:', error);
+      throw error; // Rilancia l'errore per il chatbot
+    }
   }
 
   /**
@@ -652,37 +665,155 @@ class PDFGenerator {
   }
 
   parseMarkdownToPDFContent(markdown) {
-    // Parser semplice markdown -> pdfmake content
+    // Parser markdown avanzato -> pdfmake content con formattazione corretta
     const lines = markdown.split('\n');
     const content = [];
+    let inList = false;
+    let listItems = [];
 
-    lines.forEach(line => {
-      line = line.trim();
-      if (!line) {
-        content.push({ text: '', margin: [0, 5, 0, 5] });
+    const parseInlineFormatting = (text) => {
+      // Converti markdown inline in array di text objects pdfmake
+      const parts = [];
+      let currentPos = 0;
+
+      // Pattern per bold, italic, e testo normale
+      const pattern = /(\*\*(.+?)\*\*)|(\*(.+?)\*)|([^*]+)/g;
+      let match;
+
+      while ((match = pattern.exec(text)) !== null) {
+        if (match[2]) {
+          // Bold **text**
+          parts.push({ text: match[2], bold: true });
+        } else if (match[4]) {
+          // Italic *text*
+          parts.push({ text: match[4], italics: true });
+        } else if (match[5]) {
+          // Normal text
+          parts.push({ text: match[5] });
+        }
+      }
+
+      return parts.length > 0 ? parts : [{ text: text }];
+    };
+
+    const flushList = () => {
+      if (listItems.length > 0) {
+        content.push({
+          ul: listItems,
+          margin: [0, 5, 0, 10]
+        });
+        listItems = [];
+        inList = false;
+      }
+    };
+
+    lines.forEach((line, index) => {
+      const trimmed = line.trim();
+
+      // Linea vuota
+      if (!trimmed) {
+        flushList();
+        if (content.length > 0) {
+          content.push({ text: '', margin: [0, 5, 0, 5] });
+        }
         return;
       }
 
-      // Headers
-      if (line.startsWith('###')) {
-        content.push({ text: line.replace(/^###\s*/, ''), style: 'h3' });
-      } else if (line.startsWith('##')) {
-        content.push({ text: line.replace(/^##\s*/, ''), style: 'h2' });
-      } else if (line.startsWith('#')) {
-        content.push({ text: line.replace(/^#\s*/, ''), style: 'h1' });
+      // Headers H1
+      if (trimmed.startsWith('# ') && !trimmed.startsWith('##')) {
+        flushList();
+        const headerText = trimmed.replace(/^#\s*/, '');
+        content.push({
+          text: parseInlineFormatting(headerText),
+          style: 'h1'
+        });
+        return;
       }
-      // Lists
-      else if (line.startsWith('- ') || line.startsWith('* ')) {
-        content.push({ text: line.replace(/^[-*]\s*/, '• '), margin: [0, 3, 0, 3] });
+
+      // Headers H2
+      if (trimmed.startsWith('## ') && !trimmed.startsWith('###')) {
+        flushList();
+        const headerText = trimmed.replace(/^##\s*/, '');
+        content.push({
+          text: parseInlineFormatting(headerText),
+          style: 'h2'
+        });
+        return;
       }
-      // Bold/Italic (semplificato)
-      else {
-        const processedLine = line
-          .replace(/\*\*(.+?)\*\*/g, '$1') // bold
-          .replace(/\*(.+?)\*/g, '$1');    // italic
-        content.push({ text: processedLine, margin: [0, 3, 0, 3] });
+
+      // Headers H3
+      if (trimmed.startsWith('### ') && !trimmed.startsWith('####')) {
+        flushList();
+        const headerText = trimmed.replace(/^###\s*/, '');
+        content.push({
+          text: parseInlineFormatting(headerText),
+          style: 'h3'
+        });
+        return;
       }
+
+      // Headers H4
+      if (trimmed.startsWith('#### ')) {
+        flushList();
+        const headerText = trimmed.replace(/^####\s*/, '');
+        content.push({
+          text: parseInlineFormatting(headerText),
+          fontSize: 11,
+          bold: true,
+          margin: [0, 8, 0, 4]
+        });
+        return;
+      }
+
+      // Liste non ordinate (- o *)
+      if (trimmed.match(/^[-*]\s+/)) {
+        inList = true;
+        const itemText = trimmed.replace(/^[-*]\s+/, '');
+        listItems.push(parseInlineFormatting(itemText));
+        return;
+      }
+
+      // Liste numerate (1. 2. ecc)
+      if (trimmed.match(/^\d+\.\s+/)) {
+        flushList();
+        const itemText = trimmed.replace(/^\d+\.\s+/, '');
+        // Per ora tratta come lista non ordinata (TODO: implementare ol)
+        if (!inList) {
+          inList = true;
+        }
+        listItems.push(parseInlineFormatting(itemText));
+        return;
+      }
+
+      // Separatore orizzontale
+      if (trimmed.match(/^---+$/) || trimmed.match(/^\*\*\*+$/)) {
+        flushList();
+        content.push({
+          canvas: [{
+            type: 'line',
+            x1: 0,
+            y1: 0,
+            x2: 515,
+            y2: 0,
+            lineWidth: 1,
+            lineColor: '#e2e8f0'
+          }],
+          margin: [0, 10, 0, 10]
+        });
+        return;
+      }
+
+      // Paragrafo normale
+      flushList();
+      content.push({
+        text: parseInlineFormatting(trimmed),
+        margin: [0, 3, 0, 3],
+        alignment: 'justify'
+      });
     });
+
+    // Flush lista finale se presente
+    flushList();
 
     return content;
   }
