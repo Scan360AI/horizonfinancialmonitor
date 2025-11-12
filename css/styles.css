@@ -586,9 +586,260 @@ body {
   animation: fadeIn 0.5s ease;
 }
 
+/* Print Button */
+.page-actions {
+  display: flex;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+
+.btn-print {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 12px 24px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  font-weight: 600;
+  font-family: var(--font-main);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-print:hover {
+  background: var(--primary-dark);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.btn-print:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-print i {
+  font-size: 18px;
+}
+
 /* Print Styles */
 @media print {
-  .sidebar { display: none; }
-  .main-content { margin-left: 0; }
-  .card, .metric-card { box-shadow: none; page-break-inside: avoid; }
+  /* Hide non-essential elements */
+  .sidebar,
+  .page-actions,
+  .btn-print,
+  .nav-menu {
+    display: none !important;
+  }
+
+  /* Reset layout for print */
+  body {
+    background: white;
+    font-size: 11pt;
+  }
+
+  .app-container {
+    display: block;
+  }
+
+  .main-content {
+    margin-left: 0;
+    padding: 0;
+    max-width: 100%;
+  }
+
+  /* Page setup */
+  @page {
+    margin: 2cm;
+    size: A4;
+  }
+
+  /* Headers for print */
+  .page-header {
+    margin-bottom: 20pt;
+    page-break-after: avoid;
+  }
+
+  .page-title {
+    font-size: 24pt;
+    color: #000;
+    margin-bottom: 8pt;
+  }
+
+  .page-subtitle {
+    font-size: 12pt;
+    color: #333;
+    margin-bottom: 12pt;
+  }
+
+  .page-meta {
+    background: #f5f5f5;
+    border: 1px solid #ddd;
+    box-shadow: none;
+    padding: 10pt;
+    margin-bottom: 20pt;
+    page-break-after: avoid;
+  }
+
+  /* Cards optimization */
+  .card,
+  .metric-card,
+  .chart-container,
+  .summary-card {
+    box-shadow: none;
+    border: 1px solid #ddd;
+    page-break-inside: avoid;
+    margin-bottom: 15pt;
+    padding: 15pt;
+  }
+
+  .card:hover,
+  .metric-card:hover {
+    box-shadow: none;
+    transform: none;
+  }
+
+  /* Grid adjustments */
+  .grid {
+    gap: 10pt;
+  }
+
+  .grid-2,
+  .grid-3,
+  .grid-4 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10pt;
+  }
+
+  /* Risk score card */
+  .risk-score-card {
+    background: #635BFF !important;
+    color: white;
+    border: 2px solid #635BFF;
+    page-break-after: avoid;
+    page-break-inside: avoid;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .risk-score-value {
+    font-size: 48pt;
+  }
+
+  /* Tables for print */
+  .data-table {
+    font-size: 9pt;
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .data-table th {
+    background: #f5f5f5 !important;
+    border: 1px solid #ddd;
+    padding: 6pt;
+    font-size: 8pt;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .data-table td {
+    border: 1px solid #ddd;
+    padding: 6pt;
+    font-size: 9pt;
+  }
+
+  .row-highlight {
+    background: #E6F4FF !important;
+    font-weight: 700;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Metrics */
+  .metric-card {
+    padding: 12pt;
+  }
+
+  .metric-value {
+    font-size: 20pt;
+    color: #000;
+  }
+
+  .metric-label {
+    font-size: 9pt;
+  }
+
+  .metric-icon {
+    width: 32pt;
+    height: 32pt;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Colors preservation */
+  .trend-positive { color: #00D924 !important; }
+  .trend-negative { color: #DF1B41 !important; }
+  .trend-neutral { color: #697386 !important; }
+
+  .badge {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Charts */
+  .chart-container {
+    page-break-inside: avoid;
+    border: 1px solid #ddd;
+  }
+
+  .chart-wrapper {
+    height: 300pt;
+  }
+
+  /* Summary sections */
+  .summary-section {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10pt;
+    page-break-inside: avoid;
+  }
+
+  .summary-card {
+    border: 1px solid #ddd;
+  }
+
+  .summary-card.strengths h3 {
+    color: #00D924 !important;
+  }
+
+  .summary-card.weaknesses h3 {
+    color: #DF1B41 !important;
+  }
+
+  /* Prevent orphans and widows */
+  p, li {
+    orphans: 3;
+    widows: 3;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Logo in print */
+  .logo-image {
+    max-height: 60pt;
+    page-break-after: avoid;
+  }
+
+  /* Remove animations */
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
 }
