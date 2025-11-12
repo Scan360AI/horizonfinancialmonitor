@@ -42,40 +42,37 @@ class PDFGenerator {
 
       // Create temporary container
       const tempDiv = document.createElement('div');
-      tempDiv.style.cssText = 'position: absolute; left: -9999px; top: 0;';
+      tempDiv.style.cssText = 'position: fixed; left: -9999px; top: 0; width: 210mm;';
       tempDiv.innerHTML = htmlContent;
       document.body.appendChild(tempDiv);
+
+      console.log('📝 HTML content created, length:', htmlContent.length);
 
       const companyNameSlug = this.data.company.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
       const filename = 'report-' + companyNameSlug + '-' + this.getCurrentDate() + '.pdf';
 
       // Configure html2pdf with better settings
       const opt = {
-        margin: [20, 15, 20, 15],
+        margin: [15, 15, 15, 15],
         filename: filename,
-        image: { type: 'jpeg', quality: 0.98 },
+        image: { type: 'jpeg', quality: 0.95 },
         html2canvas: {
           scale: 2,
           useCORS: true,
-          logging: false,
+          logging: true,
           letterRendering: true,
           allowTaint: true
         },
         jsPDF: {
           unit: 'mm',
           format: 'a4',
-          orientation: 'portrait',
-          compress: true
+          orientation: 'portrait'
         },
-        pagebreak: {
-          mode: ['avoid-all', 'css', 'legacy'],
-          before: '.page-break-before',
-          after: '.page-break-after',
-          avoid: '.no-page-break'
-        }
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
       };
 
-      await html2pdf().set(opt).from(tempDiv.firstChild).save();
+      console.log('🔄 Starting PDF generation...');
+      await html2pdf().set(opt).from(tempDiv).save();
 
       document.body.removeChild(tempDiv);
 
@@ -116,245 +113,50 @@ class PDFGenerator {
   // Build complete HTML for report
   buildReportHTML(sections, chartImages) {
     const currentDate = this.getFormattedDate();
+    const baseFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 
-    return '<html><head>' +
-      '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">' +
-      '<style>' + this.getStylesheet() + '</style>' +
-      '</head><body>' +
-      '<div class="report-container">' +
-      this.generateCoverPage(currentDate) +
-      this.generateContentPages(sections, chartImages) +
-      '</div>' +
-      '</body></html>';
-  }
+    let html = '<div style="font-family: ' + baseFont + '; color: #1A1F36; font-size: 10pt; line-height: 1.6; background: white;">';
 
-  // Get complete stylesheet
-  getStylesheet() {
-    return `
-      * { box-sizing: border-box; }
-      body {
-        margin: 0;
-        padding: 0;
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        color: #1A1F36;
-        font-size: 10pt;
-        line-height: 1.6;
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-      }
-      .report-container { background: white; }
-      .page-break-after { page-break-after: always; }
-      .page-break-before { page-break-before: always; }
-      .no-page-break { page-break-inside: avoid; }
+    html += this.generateCoverPage(currentDate, baseFont);
+    html += this.generateContentPages(sections, chartImages, baseFont);
 
-      /* Section Headers */
-      .section-page {
-        padding: 2rem 2.5rem;
-        position: relative;
-      }
-      .section-header {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        margin-bottom: 2rem;
-        padding-bottom: 1rem;
-        border-bottom: 3px solid #635BFF;
-      }
-      .section-number {
-        width: 45px;
-        height: 45px;
-        background: linear-gradient(135deg, #635BFF 0%, #7C73E6 100%);
-        color: white;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 18pt;
-        font-weight: 700;
-        flex-shrink: 0;
-        box-shadow: 0 4px 12px rgba(99, 91, 255, 0.25);
-      }
-      .section-title {
-        font-size: 20pt;
-        font-weight: 700;
-        color: #1A1F36;
-        margin: 0;
-        letter-spacing: -0.02em;
-      }
+    html += '</div>';
 
-      /* Page Header */
-      .page-header {
-        position: relative;
-        padding: 0.75rem 2.5rem;
-        background: linear-gradient(135deg, #F8F9FC 0%, #FFFFFF 100%);
-        border-bottom: 2px solid #E3E8EE;
-        margin-bottom: 1.5rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      .page-header-left {
-        font-size: 9pt;
-        color: #697386;
-        font-weight: 500;
-      }
-      .page-header-right {
-        font-size: 8pt;
-        color: #9AA5B8;
-      }
-
-      /* Chart Container */
-      .chart-container {
-        background: white;
-        border: 1px solid #E3E8EE;
-        border-radius: 12px;
-        padding: 1.5rem;
-        margin: 2rem 0;
-        box-shadow: 0 2px 8px rgba(50, 50, 93, 0.08);
-        page-break-inside: avoid;
-      }
-      .chart-title {
-        font-size: 11pt;
-        font-weight: 600;
-        color: #4F566B;
-        margin: 0 0 1rem 0;
-        padding-bottom: 0.5rem;
-        border-bottom: 1px solid #E3E8EE;
-      }
-      .chart-image {
-        width: 100%;
-        height: auto;
-        display: block;
-        margin-top: 1rem;
-      }
-
-      /* Tables */
-      .table-wrapper {
-        margin: 2rem 0;
-        page-break-inside: avoid;
-      }
-      .table-title {
-        font-size: 13pt;
-        font-weight: 700;
-        color: #1A1F36;
-        margin: 0 0 1rem 0;
-        letter-spacing: -0.01em;
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        background: white;
-        box-shadow: 0 1px 3px rgba(50, 50, 93, 0.08);
-        border-radius: 8px;
-        overflow: hidden;
-        font-size: 9.5pt;
-      }
-      thead tr { background: #635BFF; color: white; }
-      thead th {
-        padding: 0.9rem 1rem;
-        text-align: left;
-        font-weight: 600;
-        font-size: 10pt;
-        letter-spacing: 0.02em;
-      }
-      tbody td {
-        padding: 0.7rem 1rem;
-        border-bottom: 1px solid #F1F3F5;
-      }
-      tbody tr:nth-child(even) { background: #FAFBFC; }
-      tbody tr:hover { background: #F8F9FC; }
-      .table-highlight {
-        background: rgba(99, 91, 255, 0.08) !important;
-        font-weight: 600;
-      }
-      .align-right { text-align: right; }
-      .align-center { text-align: center; }
-
-      /* Risk Profile Progress Bars */
-      .risk-profiles {
-        margin: 2rem 0;
-        page-break-inside: avoid;
-      }
-      .risk-profile-item {
-        margin-bottom: 1.5rem;
-      }
-      .risk-profile-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 0.5rem;
-      }
-      .risk-profile-name {
-        font-size: 10pt;
-        font-weight: 600;
-        color: #1A1F36;
-      }
-      .risk-profile-score {
-        font-size: 11pt;
-        font-weight: 700;
-        color: #635BFF;
-      }
-      .risk-profile-bar-container {
-        width: 100%;
-        height: 24px;
-        background: #F1F3F5;
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
-      }
-      .risk-profile-bar {
-        height: 100%;
-        border-radius: 12px;
-        transition: width 0.3s ease;
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-        padding-right: 0.75rem;
-        font-size: 8pt;
-        font-weight: 700;
-        color: white;
-        box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.3);
-      }
-      .risk-bar-green { background: linear-gradient(90deg, #00D924 0%, #00F030 100%); }
-      .risk-bar-light-green { background: linear-gradient(90deg, #5DD39E 0%, #7FE3B5 100%); }
-      .risk-bar-yellow { background: linear-gradient(90deg, #FFB020 0%, #FFC04D 100%); }
-      .risk-bar-orange { background: linear-gradient(90deg, #FF8C42 0%, #FFA666 100%); }
-      .risk-bar-red { background: linear-gradient(90deg, #DF1B41 0%, #F04268 100%); }
-    `;
+    return html;
   }
 
   // Generate elegant cover page
-  generateCoverPage(currentDate) {
+  generateCoverPage(currentDate, baseFont) {
     const company = this.data.company.name;
     const rating = this.data.riskAssessment.rating;
     const categoryLabel = this.data.riskAssessment.categoryLabel;
 
-    let html = '<div class="page-break-after" style="height: 280mm; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 3rem; background: linear-gradient(135deg, #FAFBFC 0%, #FFFFFF 100%);">';
+    let html = '<div style="height: 270mm; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; page-break-after: always; padding: 3rem; background: linear-gradient(135deg, #FAFBFC 0%, #FFFFFF 100%);">';
 
     if (this.logoBase64) {
-      html += '<img src="' + this.logoBase64 + '" alt="Logo" style="width: 140px; height: auto; margin-bottom: 4rem; filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.08));">';
+      html += '<img src="' + this.logoBase64 + '" alt="Logo" style="width: 100px; height: auto; margin-bottom: 3rem;">';
     }
 
-    html += '<h1 style="font-size: 42pt; font-weight: 800; color: #1A1F36; margin: 0 0 1rem 0; line-height: 1.1; letter-spacing: -0.03em;">' +
+    html += '<h1 style="font-family: ' + baseFont + '; font-size: 38pt; font-weight: 800; color: #1A1F36; margin: 0 0 1rem 0; line-height: 1.1;">' +
       'REPORT FINANZIARIO<br>COMPLETO' +
       '</h1>';
 
-    html += '<div style="font-size: 22pt; font-weight: 600; color: #4F566B; margin-bottom: 0.75rem; letter-spacing: -0.01em;">' +
+    html += '<div style="font-family: ' + baseFont + '; font-size: 20pt; font-weight: 600; color: #4F566B; margin-bottom: 0.75rem;">' +
       company +
       '</div>';
 
-    html += '<div style="font-size: 13pt; color: #697386; margin-bottom: 4rem; font-weight: 500;">' +
+    html += '<div style="font-family: ' + baseFont + '; font-size: 12pt; color: #697386; margin-bottom: 3rem; font-weight: 500;">' +
       currentDate +
       '</div>';
 
-    html += '<div style="border: 4px solid #635BFF; border-radius: 20px; padding: 3rem 4rem; margin: 2rem auto; background: white; box-shadow: 0 8px 24px rgba(99, 91, 255, 0.2); max-width: 380px;">' +
-      '<div style="font-size: 11pt; color: #697386; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 1rem; font-weight: 600;">' +
+    html += '<div style="border: 4px solid #635BFF; border-radius: 16px; padding: 2.5rem 3rem; margin: 2rem auto; background: white; box-shadow: 0 8px 24px rgba(99, 91, 255, 0.2); max-width: 350px;">' +
+      '<div style="font-family: ' + baseFont + '; font-size: 10pt; color: #697386; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 0.75rem; font-weight: 600;">' +
       'Rating Aziendale' +
       '</div>' +
-      '<div style="font-size: 56pt; font-weight: 800; color: #635BFF; margin: 1rem 0; line-height: 1; letter-spacing: -0.02em;">' +
+      '<div style="font-family: ' + baseFont + '; font-size: 52pt; font-weight: 800; color: #635BFF; margin: 0.75rem 0; line-height: 1;">' +
       rating +
       '</div>' +
-      '<div style="font-size: 14pt; color: #4F566B; font-weight: 600; letter-spacing: -0.01em;">' +
+      '<div style="font-family: ' + baseFont + '; font-size: 13pt; color: #4F566B; font-weight: 600;">' +
       categoryLabel +
       '</div>' +
       '</div>';
@@ -364,7 +166,7 @@ class PDFGenerator {
   }
 
   // Generate content pages
-  generateContentPages(sections, chartImages) {
+  generateContentPages(sections, chartImages, baseFont) {
     let html = '';
     let sectionNumber = 1;
 
@@ -373,64 +175,68 @@ class PDFGenerator {
       const sectionTitle = section.title;
       const sectionLower = sectionTitle.toLowerCase();
 
+      if (i > 0) {
+        html += '<div style="page-break-before: always;"></div>';
+      }
+
       // Page header
-      html += '<div class="page-header no-page-break">' +
-        '<div class="page-header-left">Report Finanziario Completo • ' + this.data.company.name + '</div>' +
-        '<div class="page-header-right">' + this.getFormattedDate() + '</div>' +
+      html += '<div style="padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #F8F9FC 0%, #FFFFFF 100%); border-bottom: 2px solid #E3E8EE; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; page-break-inside: avoid;">' +
+        '<div style="font-family: ' + baseFont + '; font-size: 9pt; color: #697386; font-weight: 500;">Report Finanziario • ' + this.data.company.name + '</div>' +
+        '<div style="font-family: ' + baseFont + '; font-size: 8pt; color: #9AA5B8;">' + this.getFormattedDate() + '</div>' +
         '</div>';
 
-      html += '<div class="section-page ' + (i > 0 ? 'page-break-before' : '') + '">';
+      html += '<div style="padding: 1.5rem 2rem;">';
 
       // Section header with number
-      html += '<div class="section-header no-page-break">' +
-        '<div class="section-number">' + sectionNumber + '</div>' +
-        '<h2 class="section-title">' + sectionTitle + '</h2>' +
+      html += '<div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 3px solid #635BFF; page-break-inside: avoid;">' +
+        '<div style="width: 42px; height: 42px; background: linear-gradient(135deg, #635BFF 0%, #7C73E6 100%); color: white; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16pt; font-weight: 700; flex-shrink: 0; box-shadow: 0 4px 12px rgba(99, 91, 255, 0.25);">' + sectionNumber + '</div>' +
+        '<h2 style="font-family: ' + baseFont + '; font-size: 18pt; font-weight: 700; color: #1A1F36; margin: 0;">' + sectionTitle + '</h2>' +
         '</div>';
 
       // Add special content based on section
       if (sectionLower.includes('executive summary')) {
-        html += this.generateKeyMetricsBoxes();
-        html += this.generateSummaryCards();
+        html += this.generateKeyMetricsBoxes(baseFont);
+        html += this.generateSummaryCards(baseFont);
       }
 
       if (sectionLower.includes('analisi economica') || sectionLower.includes('conto economico')) {
-        html += this.generateContoEconomicoTable();
+        html += this.generateContoEconomicoTable(baseFont);
         if (chartImages && chartImages.economicTrend) {
-          html += this.wrapChartInContainer(chartImages.economicTrend, 'Trend Economico 2022-2024');
+          html += this.wrapChartInContainer(chartImages.economicTrend, 'Trend Economico 2022-2024', baseFont);
         }
       }
 
       if (sectionLower.includes('stato patrimoniale')) {
-        html += this.generateStatoPatrimonialeTable();
+        html += this.generateStatoPatrimonialeTable(baseFont);
         if (chartImages && chartImages.workingCapital) {
-          html += this.wrapChartInContainer(chartImages.workingCapital, 'Gestione Capitale Circolante');
+          html += this.wrapChartInContainer(chartImages.workingCapital, 'Gestione Capitale Circolante', baseFont);
         }
       }
 
       if (sectionLower.includes('indicatori finanziari')) {
         if (chartImages && chartImages.debtSustainability) {
-          html += this.wrapChartInContainer(chartImages.debtSustainability, 'Sostenibilità del Debito');
+          html += this.wrapChartInContainer(chartImages.debtSustainability, 'Sostenibilità del Debito', baseFont);
         }
         if (chartImages && chartImages.stressTest) {
-          html += this.wrapChartInContainer(chartImages.stressTest, 'Analisi Stress Test');
+          html += this.wrapChartInContainer(chartImages.stressTest, 'Analisi Stress Test', baseFont);
         }
       }
 
       if (sectionLower.includes('risk assessment') || sectionLower.includes('rischio')) {
-        html += this.generateRiskBox();
-        html += this.generateRiskProfilesBars();
+        html += this.generateRiskBox(baseFont);
+        html += this.generateRiskProfilesBars(baseFont);
         if (chartImages && chartImages.benchmarkRadar) {
-          html += this.wrapChartInContainer(chartImages.benchmarkRadar, 'Benchmark Settoriale');
+          html += this.wrapChartInContainer(chartImages.benchmarkRadar, 'Benchmark Settoriale', baseFont);
         }
       }
 
       if (sectionLower.includes('codice della crisi')) {
-        html += this.generateCodiceCrisiIndicators();
+        html += this.generateCodiceCrisiIndicators(baseFont);
       }
 
       // Add AI-generated content
       const content = section.content.join('\n');
-      html += this.markdownToHTML(content);
+      html += this.markdownToHTML(content, baseFont);
 
       html += '</div>';
       sectionNumber++;
@@ -440,34 +246,34 @@ class PDFGenerator {
   }
 
   // Wrap chart in styled container
-  wrapChartInContainer(chartBase64, title) {
-    return '<div class="chart-container no-page-break">' +
-      '<div class="chart-title">' + title + '</div>' +
-      '<img src="' + chartBase64 + '" class="chart-image" alt="' + title + '">' +
+  wrapChartInContainer(chartBase64, title, baseFont) {
+    return '<div style="background: white; border: 1px solid #E3E8EE; border-radius: 12px; padding: 1.5rem; margin: 2rem 0; box-shadow: 0 2px 8px rgba(50, 50, 93, 0.08); page-break-inside: avoid;">' +
+      '<div style="font-family: ' + baseFont + '; font-size: 11pt; font-weight: 600; color: #4F566B; margin: 0 0 1rem 0; padding-bottom: 0.5rem; border-bottom: 1px solid #E3E8EE;">' + title + '</div>' +
+      '<img src="' + chartBase64 + '" style="width: 100%; height: auto; display: block; margin-top: 1rem;" alt="' + title + '">' +
       '</div>';
   }
 
   // Generate key metrics boxes (4-column grid)
-  generateKeyMetricsBoxes() {
+  generateKeyMetricsBoxes(baseFont) {
     if (!this.data.keyMetrics) return '';
 
     const metrics = this.data.keyMetrics.slice(0, 4);
-    let html = '<div class="no-page-break" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; margin: 2rem 0;">';
+    let html = '<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin: 2rem 0; page-break-inside: avoid;">';
 
     metrics.forEach(m => {
       const trendColor = m.trend > 0 ? '#00D924' : m.trend < 0 ? '#DF1B41' : '#697386';
       const trendSymbol = m.trend > 0 ? '↑' : m.trend < 0 ? '↓' : '→';
 
-      html += '<div style="background: white; border: 1px solid #E3E8EE; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(50, 50, 93, 0.08);">' +
-        '<div style="font-size: 8.5pt; color: #697386; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 0.75rem; font-weight: 600;">' +
+      html += '<div style="background: white; border: 1px solid #E3E8EE; border-radius: 12px; padding: 1.25rem; box-shadow: 0 2px 8px rgba(50, 50, 93, 0.08);">' +
+        '<div style="font-family: ' + baseFont + '; font-size: 8pt; color: #697386; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem; font-weight: 600;">' +
         m.label +
         '</div>' +
-        '<div style="font-size: 20pt; font-weight: 700; color: #1A1F36; margin-bottom: 0.5rem; letter-spacing: -0.02em;">' +
+        '<div style="font-family: ' + baseFont + '; font-size: 18pt; font-weight: 700; color: #1A1F36; margin-bottom: 0.5rem;">' +
         m.value +
         '</div>';
 
       if (m.trend !== undefined) {
-        html += '<div style="font-size: 10pt; font-weight: 700; color: ' + trendColor + ';">' +
+        html += '<div style="font-family: ' + baseFont + '; font-size: 9pt; font-weight: 700; color: ' + trendColor + ';">' +
           trendSymbol + ' ' + Math.abs(m.trend).toFixed(1) + '%' +
           '</div>';
       }
@@ -480,36 +286,32 @@ class PDFGenerator {
   }
 
   // Generate summary cards (strengths/weaknesses)
-  generateSummaryCards() {
+  generateSummaryCards(baseFont) {
     if (!this.data.executiveSummary) return '';
 
     const strengths = this.data.executiveSummary.strengths || [];
     const weaknesses = this.data.executiveSummary.weaknesses || [];
 
-    let html = '<div class="no-page-break" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 2rem 0;">';
+    let html = '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 2rem 0; page-break-inside: avoid;">';
 
     // Strengths card
-    html += '<div style="background: linear-gradient(135deg, rgba(0, 217, 36, 0.08) 0%, rgba(0, 217, 36, 0.02) 100%); border: 2px solid rgba(0, 217, 36, 0.3); border-radius: 12px; padding: 1.75rem;">' +
-      '<h3 style="font-size: 13pt; font-weight: 700; color: #00D924; margin: 0 0 1.25rem 0; display: flex; align-items: center; letter-spacing: -0.01em;">' +
-      '<span style="margin-right: 0.75rem; font-size: 16pt;">✓</span> Punti di Forza' +
-      '</h3>' +
-      '<ul style="margin: 0; padding-left: 1.75rem; list-style: disc; color: #1A1F36;">';
+    html += '<div style="background: linear-gradient(135deg, rgba(0, 217, 36, 0.08) 0%, rgba(0, 217, 36, 0.02) 100%); border: 2px solid rgba(0, 217, 36, 0.3); border-radius: 12px; padding: 1.5rem;">' +
+      '<h3 style="font-family: ' + baseFont + '; font-size: 12pt; font-weight: 700; color: #00D924; margin: 0 0 1rem 0;">✓ Punti di Forza</h3>' +
+      '<ul style="margin: 0; padding-left: 1.5rem; list-style: disc; color: #1A1F36; font-family: ' + baseFont + ';">';
 
     strengths.forEach(s => {
-      html += '<li style="margin-bottom: 0.65rem; line-height: 1.5;">' + s + '</li>';
+      html += '<li style="margin-bottom: 0.5rem; line-height: 1.5;">' + s + '</li>';
     });
 
     html += '</ul></div>';
 
     // Weaknesses card
-    html += '<div style="background: linear-gradient(135deg, rgba(255, 176, 32, 0.08) 0%, rgba(255, 176, 32, 0.02) 100%); border: 2px solid rgba(255, 176, 32, 0.3); border-radius: 12px; padding: 1.75rem;">' +
-      '<h3 style="font-size: 13pt; font-weight: 700; color: #FFB020; margin: 0 0 1.25rem 0; display: flex; align-items: center; letter-spacing: -0.01em;">' +
-      '<span style="margin-right: 0.75rem; font-size: 16pt;">⚠</span> Aree di Attenzione' +
-      '</h3>' +
-      '<ul style="margin: 0; padding-left: 1.75rem; list-style: disc; color: #1A1F36;">';
+    html += '<div style="background: linear-gradient(135deg, rgba(255, 176, 32, 0.08) 0%, rgba(255, 176, 32, 0.02) 100%); border: 2px solid rgba(255, 176, 32, 0.3); border-radius: 12px; padding: 1.5rem;">' +
+      '<h3 style="font-family: ' + baseFont + '; font-size: 12pt; font-weight: 700; color: #FFB020; margin: 0 0 1rem 0;">⚠ Aree di Attenzione</h3>' +
+      '<ul style="margin: 0; padding-left: 1.5rem; list-style: disc; color: #1A1F36; font-family: ' + baseFont + ';">';
 
     weaknesses.forEach(w => {
-      html += '<li style="margin-bottom: 0.65rem; line-height: 1.5;">' + w + '</li>';
+      html += '<li style="margin-bottom: 0.5rem; line-height: 1.5;">' + w + '</li>';
     });
 
     html += '</ul></div>';
@@ -519,7 +321,7 @@ class PDFGenerator {
   }
 
   // Generate Conto Economico table
-  generateContoEconomicoTable() {
+  generateContoEconomicoTable(baseFont) {
     const ce = this.data.noteTecniche && this.data.noteTecniche.find(n => n.contoEconomico);
     if (!ce || !ce.contoEconomico) return '';
 
@@ -550,29 +352,29 @@ class PDFGenerator {
       { label: 'Utile Netto', val2023: contoEconomico.risultati && contoEconomico.risultati.utileNetto ? contoEconomico.risultati.utileNetto['2023'] : null, val2024: contoEconomico.risultati && contoEconomico.risultati.utileNetto ? contoEconomico.risultati.utileNetto['2024'] : null, highlight: true }
     ];
 
-    let html = '<div class="table-wrapper no-page-break">' +
-      '<div class="table-title">Conto Economico Riclassificato</div>' +
-      '<table>' +
+    let html = '<div style="margin: 2rem 0; page-break-inside: avoid;">' +
+      '<div style="font-family: ' + baseFont + '; font-size: 13pt; font-weight: 700; color: #1A1F36; margin: 0 0 1rem 0;">Conto Economico Riclassificato</div>' +
+      '<table style="width: 100%; border-collapse: collapse; background: white; box-shadow: 0 1px 3px rgba(50, 50, 93, 0.08); border-radius: 8px; overflow: hidden; font-size: 9pt; font-family: ' + baseFont + ';">' +
       '<thead>' +
-      '<tr>' +
-      '<th>Voce</th>' +
-      '<th class="align-right">2023</th>' +
-      '<th class="align-right">2024</th>' +
-      '<th class="align-right">Variazione Δ%</th>' +
+      '<tr style="background: #635BFF; color: white;">' +
+      '<th style="padding: 0.75rem 1rem; text-align: left; font-weight: 600; font-size: 9.5pt;">Voce</th>' +
+      '<th style="padding: 0.75rem 1rem; text-align: right; font-weight: 600; font-size: 9.5pt;">2023</th>' +
+      '<th style="padding: 0.75rem 1rem; text-align: right; font-weight: 600; font-size: 9.5pt;">2024</th>' +
+      '<th style="padding: 0.75rem 1rem; text-align: right; font-weight: 600; font-size: 9.5pt;">Var. Δ%</th>' +
       '</tr>' +
       '</thead>' +
       '<tbody>';
 
-    rows.forEach((row) => {
+    rows.forEach((row, idx) => {
+      const bgColor = row.highlight ? 'rgba(99, 91, 255, 0.08)' : (idx % 2 === 0 ? '#FAFBFC' : 'white');
       const variation = calcVariation(row.val2024, row.val2023);
       const varColor = getVariationColor(row.val2024, row.val2023);
-      const rowClass = row.highlight ? 'table-highlight' : '';
 
-      html += '<tr class="' + rowClass + '">' +
-        '<td style="font-weight: ' + (row.highlight ? '700' : '500') + ';">' + row.label + '</td>' +
-        '<td class="align-right" style="font-weight: ' + (row.highlight ? '600' : '400') + ';">' + formatEuro(row.val2023) + '</td>' +
-        '<td class="align-right" style="font-weight: ' + (row.highlight ? '600' : '400') + ';">' + formatEuro(row.val2024) + '</td>' +
-        '<td class="align-right" style="font-weight: 700; color: ' + varColor + ';">' + variation + '</td>' +
+      html += '<tr style="background: ' + bgColor + '; border-bottom: 1px solid #F1F3F5;">' +
+        '<td style="padding: 0.6rem 1rem; font-weight: ' + (row.highlight ? '700' : '500') + ';">' + row.label + '</td>' +
+        '<td style="padding: 0.6rem 1rem; text-align: right; font-weight: ' + (row.highlight ? '600' : '400') + ';">' + formatEuro(row.val2023) + '</td>' +
+        '<td style="padding: 0.6rem 1rem; text-align: right; font-weight: ' + (row.highlight ? '600' : '400') + ';">' + formatEuro(row.val2024) + '</td>' +
+        '<td style="padding: 0.6rem 1rem; text-align: right; font-weight: 700; color: ' + varColor + ';">' + variation + '</td>' +
         '</tr>';
     });
 
@@ -581,7 +383,7 @@ class PDFGenerator {
   }
 
   // Generate Stato Patrimoniale table
-  generateStatoPatrimonialeTable() {
+  generateStatoPatrimonialeTable(baseFont) {
     const sp = this.data.noteTecniche && this.data.noteTecniche.find(n => n.statoPatrimoniale);
     if (!sp || !sp.statoPatrimoniale) return '';
 
@@ -608,55 +410,55 @@ class PDFGenerator {
       { label: 'TOTALE PASSIVO', val2023: passivo.totale ? passivo.totale['2023'] : null, val2024: passivo.totale ? passivo.totale['2024'] : null, total: true }
     ];
 
-    let html = '<div class="table-wrapper no-page-break">' +
-      '<div class="table-title">Stato Patrimoniale Riclassificato</div>' +
+    let html = '<div style="margin: 2rem 0; page-break-inside: avoid;">' +
+      '<div style="font-family: ' + baseFont + '; font-size: 13pt; font-weight: 700; color: #1A1F36; margin: 0 0 1rem 0;">Stato Patrimoniale Riclassificato</div>' +
       '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">';
 
     // ATTIVO table
-    html += '<table style="font-size: 9pt;">' +
+    html += '<table style="width: 100%; border-collapse: collapse; background: white; box-shadow: 0 1px 3px rgba(50, 50, 93, 0.08); font-size: 9pt; font-family: ' + baseFont + ';">' +
       '<thead>' +
-      '<tr style="background: #00D924;">' +
-      '<th colspan="3">ATTIVO</th>' +
+      '<tr style="background: #00D924; color: white;">' +
+      '<th colspan="3" style="padding: 0.6rem; text-align: left; font-weight: 600;">ATTIVO</th>' +
       '</tr>' +
       '<tr style="background: rgba(0, 217, 36, 0.15); color: #1A1F36;">' +
-      '<th>Voce</th>' +
-      '<th class="align-right">2023</th>' +
-      '<th class="align-right">2024</th>' +
+      '<th style="padding: 0.5rem; text-align: left; font-weight: 600; font-size: 8.5pt;">Voce</th>' +
+      '<th style="padding: 0.5rem; text-align: right; font-weight: 600; font-size: 8.5pt;">2023</th>' +
+      '<th style="padding: 0.5rem; text-align: right; font-weight: 600; font-size: 8.5pt;">2024</th>' +
       '</tr>' +
       '</thead>' +
       '<tbody>';
 
-    attivoRows.forEach((row) => {
-      const rowClass = row.total ? 'table-highlight' : '';
-      html += '<tr class="' + rowClass + '">' +
-        '<td style="font-weight: ' + (row.total ? '700' : '500') + ';">' + row.label + '</td>' +
-        '<td class="align-right" style="font-weight: ' + (row.total ? '600' : '400') + ';">' + formatEuro(row.val2023) + '</td>' +
-        '<td class="align-right" style="font-weight: ' + (row.total ? '600' : '400') + ';">' + formatEuro(row.val2024) + '</td>' +
+    attivoRows.forEach((row, idx) => {
+      const bgColor = row.total ? 'rgba(99, 91, 255, 0.08)' : (idx % 2 === 0 ? '#FAFBFC' : 'white');
+      html += '<tr style="background: ' + bgColor + '; border-bottom: 1px solid #F1F3F5;">' +
+        '<td style="padding: 0.5rem; font-weight: ' + (row.total ? '700' : '500') + ';">' + row.label + '</td>' +
+        '<td style="padding: 0.5rem; text-align: right; font-weight: ' + (row.total ? '600' : '400') + ';">' + formatEuro(row.val2023) + '</td>' +
+        '<td style="padding: 0.5rem; text-align: right; font-weight: ' + (row.total ? '600' : '400') + ';">' + formatEuro(row.val2024) + '</td>' +
         '</tr>';
     });
 
     html += '</tbody></table>';
 
     // PASSIVO table
-    html += '<table style="font-size: 9pt;">' +
+    html += '<table style="width: 100%; border-collapse: collapse; background: white; box-shadow: 0 1px 3px rgba(50, 50, 93, 0.08); font-size: 9pt; font-family: ' + baseFont + ';">' +
       '<thead>' +
-      '<tr style="background: #DF1B41;">' +
-      '<th colspan="3">PASSIVO</th>' +
+      '<tr style="background: #DF1B41; color: white;">' +
+      '<th colspan="3" style="padding: 0.6rem; text-align: left; font-weight: 600;">PASSIVO</th>' +
       '</tr>' +
       '<tr style="background: rgba(223, 27, 65, 0.15); color: #1A1F36;">' +
-        '<th>Voce</th>' +
-        '<th class="align-right">2023</th>' +
-        '<th class="align-right">2024</th>' +
+        '<th style="padding: 0.5rem; text-align: left; font-weight: 600; font-size: 8.5pt;">Voce</th>' +
+        '<th style="padding: 0.5rem; text-align: right; font-weight: 600; font-size: 8.5pt;">2023</th>' +
+        '<th style="padding: 0.5rem; text-align: right; font-weight: 600; font-size: 8.5pt;">2024</th>' +
       '</tr>' +
       '</thead>' +
       '<tbody>';
 
-    passivoRows.forEach((row) => {
-      const rowClass = row.total ? 'table-highlight' : '';
-      html += '<tr class="' + rowClass + '">' +
-        '<td style="font-weight: ' + (row.total ? '700' : '500') + ';">' + row.label + '</td>' +
-        '<td class="align-right" style="font-weight: ' + (row.total ? '600' : '400') + ';">' + formatEuro(row.val2023) + '</td>' +
-        '<td class="align-right" style="font-weight: ' + (row.total ? '600' : '400') + ';">' + formatEuro(row.val2024) + '</td>' +
+    passivoRows.forEach((row, idx) => {
+      const bgColor = row.total ? 'rgba(99, 91, 255, 0.08)' : (idx % 2 === 0 ? '#FAFBFC' : 'white');
+      html += '<tr style="background: ' + bgColor + '; border-bottom: 1px solid #F1F3F5;">' +
+        '<td style="padding: 0.5rem; font-weight: ' + (row.total ? '700' : '500') + ';">' + row.label + '</td>' +
+        '<td style="padding: 0.5rem; text-align: right; font-weight: ' + (row.total ? '600' : '400') + ';">' + formatEuro(row.val2023) + '</td>' +
+        '<td style="padding: 0.5rem; text-align: right; font-weight: ' + (row.total ? '600' : '400') + ';">' + formatEuro(row.val2024) + '</td>' +
         '</tr>';
     });
 
@@ -667,29 +469,29 @@ class PDFGenerator {
   }
 
   // Generate risk assessment box
-  generateRiskBox() {
+  generateRiskBox(baseFont) {
     const risk = this.data.riskAssessment;
     if (!risk) return '';
 
-    let html = '<div class="no-page-break" style="background: linear-gradient(135deg, #635BFF 0%, #7C73E6 100%); color: white; border-radius: 16px; padding: 2.5rem; margin: 2rem 0; box-shadow: 0 8px 24px rgba(99, 91, 255, 0.35);">' +
-      '<h3 style="font-size: 16pt; font-weight: 700; margin: 0 0 2rem 0; letter-spacing: -0.02em;">Valutazione del Rischio</h3>' +
-      '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.5rem;">' +
+    let html = '<div style="background: linear-gradient(135deg, #635BFF 0%, #7C73E6 100%); color: white; border-radius: 14px; padding: 2rem; margin: 2rem 0; box-shadow: 0 8px 24px rgba(99, 91, 255, 0.35); page-break-inside: avoid;">' +
+      '<h3 style="font-family: ' + baseFont + '; font-size: 15pt; font-weight: 700; margin: 0 0 1.5rem 0;">Valutazione del Rischio</h3>' +
+      '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem;">' +
       '<div style="text-align: center;">' +
-      '<div style="font-size: 9.5pt; opacity: 0.85; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600;">Rating</div>' +
-      '<div style="font-size: 36pt; font-weight: 800; line-height: 1; letter-spacing: -0.02em;">' + risk.rating + '</div>' +
+      '<div style="font-family: ' + baseFont + '; font-size: 9pt; opacity: 0.85; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Rating</div>' +
+      '<div style="font-family: ' + baseFont + '; font-size: 32pt; font-weight: 800; line-height: 1;">' + risk.rating + '</div>' +
       '</div>' +
       '<div style="text-align: center;">' +
-      '<div style="font-size: 9.5pt; opacity: 0.85; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600;">Score</div>' +
-      '<div style="font-size: 36pt; font-weight: 800; line-height: 1; letter-spacing: -0.02em;">' + risk.score.toFixed(1) + '</div>' +
+      '<div style="font-family: ' + baseFont + '; font-size: 9pt; opacity: 0.85; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Score</div>' +
+      '<div style="font-family: ' + baseFont + '; font-size: 32pt; font-weight: 800; line-height: 1;">' + risk.score.toFixed(1) + '</div>' +
       '</div>' +
       '<div style="text-align: center;">' +
-      '<div style="font-size: 9.5pt; opacity: 0.85; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600;">Categoria</div>' +
-      '<div style="font-size: 18pt; font-weight: 700; line-height: 1.2; margin-top: 0.75rem; letter-spacing: -0.01em;">' + risk.categoryLabel + '</div>' +
+      '<div style="font-family: ' + baseFont + '; font-size: 9pt; opacity: 0.85; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Categoria</div>' +
+      '<div style="font-family: ' + baseFont + '; font-size: 16pt; font-weight: 700; line-height: 1.2; margin-top: 0.5rem;">' + risk.categoryLabel + '</div>' +
       '</div>' +
       '</div>';
 
     if (risk.description) {
-      html += '<div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid rgba(255, 255, 255, 0.25); font-size: 10.5pt; line-height: 1.7; opacity: 0.95;">' +
+      html += '<div style="font-family: ' + baseFont + '; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(255, 255, 255, 0.25); font-size: 10pt; line-height: 1.6; opacity: 0.95;">' +
         risk.description +
         '</div>';
     }
@@ -699,28 +501,28 @@ class PDFGenerator {
   }
 
   // Generate Risk Profiles with progress bars
-  generateRiskProfilesBars() {
+  generateRiskProfilesBars(baseFont) {
     if (!this.data.profiles || this.data.profiles.length === 0) return '';
 
-    let html = '<div class="risk-profiles no-page-break">' +
-      '<h3 style="font-size: 14pt; font-weight: 700; color: #1A1F36; margin: 2rem 0 1.5rem 0; letter-spacing: -0.01em;">Profili di Rischio</h3>';
+    let html = '<div style="margin: 2rem 0; page-break-inside: avoid;">' +
+      '<h3 style="font-family: ' + baseFont + '; font-size: 13pt; font-weight: 700; color: #1A1F36; margin: 0 0 1.5rem 0;">Profili di Rischio</h3>';
 
     this.data.profiles.forEach(profile => {
       const percentage = (profile.score / 5) * 100;
-      let barClass = 'risk-bar-green';
+      let barColor = '#00D924';
 
-      if (profile.color === 'light-green') barClass = 'risk-bar-light-green';
-      else if (profile.color === 'yellow') barClass = 'risk-bar-yellow';
-      else if (profile.color === 'orange') barClass = 'risk-bar-orange';
-      else if (profile.color === 'red') barClass = 'risk-bar-red';
+      if (profile.color === 'light-green') barColor = '#5DD39E';
+      else if (profile.color === 'yellow') barColor = '#FFB020';
+      else if (profile.color === 'orange') barColor = '#FF8C42';
+      else if (profile.color === 'red') barColor = '#DF1B41';
 
-      html += '<div class="risk-profile-item">' +
-        '<div class="risk-profile-header">' +
-        '<div class="risk-profile-name">' + profile.name + '</div>' +
-        '<div class="risk-profile-score">' + profile.score + ' / 5</div>' +
+      html += '<div style="margin-bottom: 1.25rem;">' +
+        '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">' +
+        '<div style="font-family: ' + baseFont + '; font-size: 10pt; font-weight: 600; color: #1A1F36;">' + profile.name + '</div>' +
+        '<div style="font-family: ' + baseFont + '; font-size: 10pt; font-weight: 700; color: #635BFF;">' + profile.score + ' / 5</div>' +
         '</div>' +
-        '<div class="risk-profile-bar-container">' +
-        '<div class="risk-profile-bar ' + barClass + '" style="width: ' + percentage + '%;">' +
+        '<div style="width: 100%; height: 22px; background: #F1F3F5; border-radius: 11px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);">' +
+        '<div style="height: 100%; width: ' + percentage + '%; background: ' + barColor + '; border-radius: 11px; display: flex; align-items: center; justify-content: flex-end; padding-right: 0.75rem; font-family: ' + baseFont + '; font-size: 8pt; font-weight: 700; color: white;">' +
         (percentage > 15 ? profile.evaluation : '') +
         '</div>' +
         '</div>' +
@@ -732,19 +534,19 @@ class PDFGenerator {
   }
 
   // Generate Codice della Crisi indicators
-  generateCodiceCrisiIndicators() {
+  generateCodiceCrisiIndicators(baseFont) {
     const crisi = this.data.codiceCrisi;
     if (!crisi || !crisi.indices) return '';
 
-    let html = '<div class="no-page-break" style="margin: 2rem 0;">';
+    let html = '<div style="margin: 2rem 0; page-break-inside: avoid;">';
 
-    html += '<div style="background: ' + (crisi.status === 'OK' ? 'rgba(0, 217, 36, 0.08)' : 'rgba(255, 176, 32, 0.08)') + '; border: 2px solid ' + (crisi.status === 'OK' ? '#00D924' : '#FFB020') + '; border-radius: 12px; padding: 1.75rem; margin-bottom: 1.5rem;">' +
+    html += '<div style="background: ' + (crisi.status === 'OK' ? 'rgba(0, 217, 36, 0.08)' : 'rgba(255, 176, 32, 0.08)') + '; border: 2px solid ' + (crisi.status === 'OK' ? '#00D924' : '#FFB020') + '; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;">' +
       '<div style="display: flex; align-items: center; justify-content: space-between;">' +
       '<div>' +
-      '<div style="font-size: 12pt; font-weight: 700; color: #1A1F36; margin-bottom: 0.4rem; letter-spacing: -0.01em;">Status Codice della Crisi</div>' +
-      '<div style="font-size: 9.5pt; color: #697386; font-weight: 500;">Valutazione degli indicatori di allerta</div>' +
+      '<div style="font-family: ' + baseFont + '; font-size: 11pt; font-weight: 700; color: #1A1F36; margin-bottom: 0.25rem;">Status Codice della Crisi</div>' +
+      '<div style="font-family: ' + baseFont + '; font-size: 9pt; color: #697386; font-weight: 500;">Valutazione degli indicatori di allerta</div>' +
       '</div>' +
-      '<div style="font-size: 28pt; font-weight: 700; color: ' + (crisi.status === 'OK' ? '#00D924' : '#FFB020') + ';">' +
+      '<div style="font-size: 24pt; font-weight: 700; color: ' + (crisi.status === 'OK' ? '#00D924' : '#FFB020') + ';">' +
       (crisi.status === 'OK' ? '✓' : '⚠') +
       '</div>' +
       '</div>' +
@@ -757,15 +559,15 @@ class PDFGenerator {
       const statusBg = idx.status === 'OK' ? 'rgba(0, 217, 36, 0.12)' : idx.status === 'WARNING' ? 'rgba(255, 176, 32, 0.12)' : 'rgba(223, 27, 65, 0.12)';
       const statusSymbol = idx.status === 'OK' ? '✓' : '⚠';
 
-      html += '<div style="display: flex; align-items: center; padding: 1.25rem; ' + (i > 0 ? 'border-top: 1px solid #E3E8EE;' : '') + '">' +
-        '<div style="width: 42px; height: 42px; border-radius: 50%; background: ' + statusBg + '; color: ' + statusColor + '; display: flex; align-items: center; justify-content: center; font-size: 18pt; font-weight: 700; flex-shrink: 0; margin-right: 1.25rem;">' +
+      html += '<div style="display: flex; align-items: center; padding: 1rem; ' + (i > 0 ? 'border-top: 1px solid #E3E8EE;' : '') + '">' +
+        '<div style="width: 38px; height: 38px; border-radius: 50%; background: ' + statusBg + '; color: ' + statusColor + '; display: flex; align-items: center; justify-content: center; font-size: 16pt; font-weight: 700; flex-shrink: 0; margin-right: 1rem;">' +
         statusSymbol +
         '</div>' +
         '<div style="flex: 1;">' +
-        '<div style="font-weight: 600; font-size: 10.5pt; color: #1A1F36; margin-bottom: 0.35rem; letter-spacing: -0.01em;">' + idx.name + '</div>' +
-        '<div style="font-size: 9pt; color: #4F566B;">Valore: <strong>' + idx.value + '</strong> | Soglia: <strong>' + idx.soglia + '</strong></div>' +
+        '<div style="font-family: ' + baseFont + '; font-weight: 600; font-size: 10pt; color: #1A1F36; margin-bottom: 0.25rem;">' + idx.name + '</div>' +
+        '<div style="font-family: ' + baseFont + '; font-size: 9pt; color: #4F566B;">Valore: <strong>' + idx.value + '</strong> | Soglia: <strong>' + idx.soglia + '</strong></div>' +
         '</div>' +
-        '<div style="padding: 0.6rem 1.2rem; background: ' + statusBg + '; color: ' + statusColor + '; border-radius: 8px; font-size: 9pt; font-weight: 700; letter-spacing: 0.02em;">' +
+        '<div style="font-family: ' + baseFont + '; padding: 0.5rem 1rem; background: ' + statusBg + '; color: ' + statusColor + '; border-radius: 6px; font-size: 8.5pt; font-weight: 700;">' +
         idx.status +
         '</div>' +
         '</div>';
@@ -776,13 +578,13 @@ class PDFGenerator {
   }
 
   // Convert markdown to HTML
-  markdownToHTML(markdown) {
+  markdownToHTML(markdown, baseFont) {
     let html = markdown;
 
     // Headers
-    html = html.replace(/^### (.*$)/gim, '<h3 style="font-size: 13pt; font-weight: 700; color: #4F566B; margin: 1.75rem 0 0.9rem 0; letter-spacing: -0.01em;">$1</h3>');
-    html = html.replace(/^## (.*$)/gim, '<h2 style="font-size: 15pt; font-weight: 700; color: #635BFF; margin: 2.25rem 0 1.1rem 0; letter-spacing: -0.01em;">$1</h2>');
-    html = html.replace(/^# (.*$)/gim, '<h1 style="font-size: 17pt; font-weight: 700; color: #1A1F36; margin: 2.5rem 0 1.25rem 0; letter-spacing: -0.02em;">$1</h1>');
+    html = html.replace(/^### (.*$)/gim, '<h3 style="font-family: ' + baseFont + '; font-size: 12pt; font-weight: 700; color: #4F566B; margin: 1.5rem 0 0.75rem 0;">$1</h3>');
+    html = html.replace(/^## (.*$)/gim, '<h2 style="font-family: ' + baseFont + '; font-size: 14pt; font-weight: 700; color: #635BFF; margin: 2rem 0 1rem 0;">$1</h2>');
+    html = html.replace(/^# (.*$)/gim, '<h1 style="font-family: ' + baseFont + '; font-size: 16pt; font-weight: 700; color: #1A1F36; margin: 2rem 0 1rem 0;">$1</h1>');
 
     // Bold and italic
     html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
@@ -798,17 +600,17 @@ class PDFGenerator {
       const line = lines[i];
       if (line.match(/^[\-\*]\s+(.+)/)) {
         if (!inList) {
-          result.push('<ul style="margin: 1.25rem 0; padding-left: 2rem; list-style: disc; color: #1A1F36; line-height: 1.7;">');
+          result.push('<ul style="font-family: ' + baseFont + '; margin: 1rem 0; padding-left: 2rem; list-style: disc; color: #1A1F36; line-height: 1.6;">');
           inList = true;
         }
-        result.push('<li style="margin-bottom: 0.6rem;">' + line.replace(/^[\-\*]\s+/, '') + '</li>');
+        result.push('<li style="margin-bottom: 0.5rem;">' + line.replace(/^[\-\*]\s+/, '') + '</li>');
       } else {
         if (inList) {
           result.push('</ul>');
           inList = false;
         }
         if (line.trim() && !line.startsWith('<')) {
-          result.push('<p style="margin: 1.1rem 0; line-height: 1.7; color: #1A1F36; text-align: justify;">' + line + '</p>');
+          result.push('<p style="font-family: ' + baseFont + '; margin: 1rem 0; line-height: 1.6; color: #1A1F36; text-align: justify;">' + line + '</p>');
         } else {
           result.push(line);
         }
@@ -845,14 +647,12 @@ class PDFGenerator {
 
   async generateCustomNote(noteContent, title) {
     const noteTitle = title || 'Nota Tecnica';
+    const baseFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 
     try {
       await this.loadLogo();
 
-      let htmlContent = '<html><head>' +
-        '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">' +
-        '<style>body { font-family: "Inter", sans-serif; color: #1A1F36; font-size: 10.5pt; line-height: 1.6; padding: 2rem; }</style>' +
-        '</head><body>';
+      let htmlContent = '<div style="font-family: ' + baseFont + '; color: #1A1F36; font-size: 10pt; line-height: 1.6; padding: 2rem;">';
 
       htmlContent += '<div style="text-align: center; margin-bottom: 2rem; padding-bottom: 2rem; border-bottom: 2px solid #635BFF;">';
 
@@ -860,15 +660,15 @@ class PDFGenerator {
         htmlContent += '<img src="' + this.logoBase64 + '" alt="Logo" style="width: 100px; height: auto; margin-bottom: 1rem;">';
       }
 
-      htmlContent += '<h1 style="font-size: 22pt; font-weight: 700; color: #635BFF; margin: 0; letter-spacing: -0.01em;">' + noteTitle + '</h1>';
-      htmlContent += '<div style="font-size: 10pt; color: #697386; margin-top: 0.75rem; font-weight: 500;">' + this.getFormattedDate() + '</div>';
+      htmlContent += '<h1 style="font-family: ' + baseFont + '; font-size: 20pt; font-weight: 700; color: #635BFF; margin: 0;">' + noteTitle + '</h1>';
+      htmlContent += '<div style="font-family: ' + baseFont + '; font-size: 10pt; color: #697386; margin-top: 0.5rem; font-weight: 500;">' + this.getFormattedDate() + '</div>';
       htmlContent += '</div>';
 
-      htmlContent += this.markdownToHTML(noteContent);
-      htmlContent += '</body></html>';
+      htmlContent += this.markdownToHTML(noteContent, baseFont);
+      htmlContent += '</div>';
 
       const tempDiv = document.createElement('div');
-      tempDiv.style.cssText = 'position: absolute; left: -9999px; top: 0;';
+      tempDiv.style.cssText = 'position: fixed; left: -9999px; top: 0; width: 210mm;';
       tempDiv.innerHTML = htmlContent;
       document.body.appendChild(tempDiv);
 
@@ -882,7 +682,7 @@ class PDFGenerator {
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
 
-      await html2pdf().set(opt).from(tempDiv.firstChild).save();
+      await html2pdf().set(opt).from(tempDiv).save();
 
       document.body.removeChild(tempDiv);
 
