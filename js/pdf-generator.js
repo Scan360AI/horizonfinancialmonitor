@@ -169,9 +169,9 @@ class PDFGenerator {
       },
 
       defaultStyle: {
-        font: 'Helvetica',
-        fontSize: 10,
-        lineHeight: 1.4
+        font: 'Times',
+        fontSize: 11,
+        lineHeight: 1.6
       }
     };
 
@@ -338,6 +338,7 @@ class PDFGenerator {
       },
 
       defaultStyle: {
+        font: 'Times',
         fontSize: 11,
         lineHeight: 1.6,
         color: '#1e293b'
