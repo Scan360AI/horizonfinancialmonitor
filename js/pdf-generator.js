@@ -116,13 +116,23 @@ class PDFGenerator {
 
       htmlContent += '</div>';
 
-      console.log('📝 HTML length:', htmlContent.length);
-      console.log('📝 First 500 chars:', htmlContent.substring(0, 500));
+      console.log('📝 HTML content created, length:', htmlContent.length);
 
-      // Create temporary container
+      // Create temporary container with proper visibility for height calculation
       const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '0';
+      tempDiv.style.top = '0';
+      tempDiv.style.width = '210mm';  // A4 width
+      tempDiv.style.visibility = 'hidden';  // Hidden but still takes up space for height calculation
+      tempDiv.style.overflow = 'hidden';
       tempDiv.innerHTML = htmlContent;
       document.body.appendChild(tempDiv);
+
+      // Wait for browser to calculate dimensions
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      console.log('📐 Temp div dimensions:', tempDiv.offsetWidth, 'x', tempDiv.offsetHeight);
 
       const companyNameSlug = this.data.company.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
       const filename = 'report-' + companyNameSlug + '-' + this.getCurrentDate() + '.pdf';
@@ -133,7 +143,9 @@ class PDFGenerator {
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: {
           scale: 2,
-          logging: true
+          logging: true,
+          useCORS: true,
+          allowTaint: true
         },
         jsPDF: {
           unit: 'mm',
@@ -147,7 +159,7 @@ class PDFGenerator {
       await worker.save();
 
       document.body.removeChild(tempDiv);
-      console.log('✅ PDF generated!');
+      console.log('✅ Professional report generated successfully');
 
     } catch (error) {
       console.error('❌ Error:', error);
