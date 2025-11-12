@@ -97,6 +97,18 @@
   transform: scale(1) translateY(0);
 }
 
+/* Fullscreen Mode */
+.chatbot-window.fullscreen {
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  border-radius: 0;
+}
+
 /* Header */
 .chatbot-header {
   background: linear-gradient(135deg, var(--primary-color, #2f3e9e) 0%, #1e2875 100%);
@@ -153,6 +165,13 @@
   }
 }
 
+.chatbot-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chatbot-fullscreen,
 .chatbot-close {
   background: rgba(255, 255, 255, 0.1);
   border: none;
@@ -168,11 +187,13 @@
   transition: all 0.2s ease;
 }
 
+.chatbot-fullscreen:hover,
 .chatbot-close:hover {
   background: rgba(255, 255, 255, 0.2);
   transform: scale(1.05);
 }
 
+.chatbot-fullscreen:active,
 .chatbot-close:active {
   transform: scale(0.95);
 }
@@ -499,6 +520,60 @@
 
 .btn-send i {
   transform: rotate(-45deg);
+}
+
+/* PDF Actions */
+.chatbot-pdf-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.btn-pdf {
+  flex: 1;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, #24b47e 0%, #1d9268 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.btn-pdf.secondary {
+  background: linear-gradient(135deg, var(--primary-color, #2f3e9e) 0%, #1e2875 100%);
+}
+
+.btn-pdf:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(36, 180, 126, 0.3);
+}
+
+.btn-pdf.secondary:hover {
+  box-shadow: 0 4px 12px rgba(47, 62, 158, 0.3);
+}
+
+.btn-pdf:active {
+  transform: translateY(0);
+}
+
+.btn-pdf:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-pdf i {
+  font-size: 16px;
 }
 
 /* ============================================

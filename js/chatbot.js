@@ -10,6 +10,7 @@ class FinancialChatbot {
     this.conversationHistory = [];
     this.isOpen = false;
     this.isLoading = false;
+    this.waitingForNoteSpec = false;
 
     // Elementi UI
     this.chatWidget = null;
@@ -75,9 +76,14 @@ class FinancialChatbot {
             </p>
           </div>
         </div>
-        <button class="chatbot-close" aria-label="Chiudi chat">
-          <i class="ri-close-line"></i>
-        </button>
+        <div class="chatbot-header-actions">
+          <button class="chatbot-fullscreen" aria-label="Toggle fullscreen">
+            <i class="ri-fullscreen-line"></i>
+          </button>
+          <button class="chatbot-close" aria-label="Chiudi chat">
+            <i class="ri-close-line"></i>
+          </button>
+        </div>
       </div>
 
       <div class="chatbot-messages" id="chatbot-messages">
@@ -111,16 +117,29 @@ class FinancialChatbot {
           </a>
         </div>
 
-        <div class="chatbot-input" id="chat-input-area" style="display: none;">
-          <input
-            type="text"
-            id="chatbot-input-field"
-            placeholder="Chiedi qualcosa sui dati finanziari..."
-            autocomplete="off"
-          />
-          <button id="chatbot-send-btn" class="btn-send" aria-label="Invia messaggio">
-            <i class="ri-send-plane-fill"></i>
-          </button>
+        <div id="chat-controls" style="display: none;">
+          <div class="chatbot-pdf-actions">
+            <button id="btn-generate-note" class="btn-pdf">
+              <i class="ri-file-edit-line"></i>
+              Genera Nota
+            </button>
+            <button id="btn-generate-report" class="btn-pdf secondary">
+              <i class="ri-file-chart-line"></i>
+              Report Completo
+            </button>
+          </div>
+
+          <div class="chatbot-input">
+            <input
+              type="text"
+              id="chatbot-input-field"
+              placeholder="Chiedi qualcosa sui dati finanziari..."
+              autocomplete="off"
+            />
+            <button id="chatbot-send-btn" class="btn-send" aria-label="Invia messaggio">
+              <i class="ri-send-plane-fill"></i>
+            </button>
+          </div>
         </div>
       </div>
     `;
@@ -141,6 +160,10 @@ class FinancialChatbot {
     // Toggle chat window
     const toggleBtn = this.chatWidget.querySelector('.chatbot-toggle');
     toggleBtn.addEventListener('click', () => this.toggleChat());
+
+    // Fullscreen button
+    const fullscreenBtn = this.chatWindow.querySelector('.chatbot-fullscreen');
+    fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
 
     // Close button
     const closeBtn = this.chatWindow.querySelector('.chatbot-close');
@@ -170,6 +193,13 @@ class FinancialChatbot {
         this.saveApiKey();
       }
     });
+
+    // PDF buttons
+    const generateNoteBtn = document.getElementById('btn-generate-note');
+    generateNoteBtn?.addEventListener('click', () => this.initiateNoteGeneration());
+
+    const generateReportBtn = document.getElementById('btn-generate-report');
+    generateReportBtn?.addEventListener('click', () => this.generateFullReport());
   }
 
   toggleChat() {
@@ -182,6 +212,18 @@ class FinancialChatbot {
     } else {
       this.chatWindow.classList.remove('open');
       this.chatWidget.classList.remove('hidden');
+    }
+  }
+
+  toggleFullscreen() {
+    const isFullscreen = this.chatWindow.classList.toggle('fullscreen');
+    const fullscreenBtn = this.chatWindow.querySelector('.chatbot-fullscreen i');
+
+    // Cambia icona
+    if (isFullscreen) {
+      fullscreenBtn.className = 'ri-fullscreen-exit-line';
+    } else {
+      fullscreenBtn.className = 'ri-fullscreen-line';
     }
   }
 
@@ -216,7 +258,7 @@ class FinancialChatbot {
 
   showChatInput() {
     document.getElementById('api-key-setup').style.display = 'none';
-    document.getElementById('chat-input-area').style.display = 'flex';
+    document.getElementById('chat-controls').style.display = 'block';
     this.inputField?.focus();
   }
 
@@ -243,6 +285,12 @@ class FinancialChatbot {
 
       // Aggiungi risposta
       this.addMessage('bot', response);
+
+      // Se stiamo aspettando spec per nota, genera il PDF
+      if (this.waitingForNoteSpec) {
+        this.waitingForNoteSpec = false;
+        await this.generateNoteFromConversation(message, response);
+      }
 
     } catch (error) {
       console.error('Errore Gemini API:', error);
@@ -470,6 +518,90 @@ Ottima crescita, ma...
     setTimeout(() => {
       this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
     }, 100);
+  }
+
+  // ============================================
+  // PDF GENERATION METHODS
+  // ============================================
+
+  async initiateNoteGeneration() {
+    if (!this.apiKey) {
+      alert('Configura prima la tua API key di Gemini');
+      return;
+    }
+
+    // Chiedi all'utente che tipo di nota vuole
+    this.addMessage(
+      'bot',
+      '📝 **Generazione Nota Personalizzata**\n\nChe tipo di nota vuoi generare? Puoi specificare:\n\n• **Tema specifico** (es. "Analisi della liquidità")\n• **Scenario** (es. "Impatto di un calo ricavi del 15%")\n• **Focus su un indicatore** (es. "Approfondimento sul DSCR")\n• **Raccomandazioni** (es. "Piano per migliorare il cash flow")\n\nDescrivimi cosa ti serve e genererò una nota dettagliata scaricabile in PDF.'
+    );
+
+    // Imposta flag per la prossima risposta dell'utente
+    this.waitingForNoteSpec = true;
+  }
+
+  async generateNoteFromConversation(userSpec, botResponse) {
+    try {
+      // Crea il PDF Generator
+      const pdfGen = new PDFGenerator(this.financialData);
+
+      // Determina il titolo dalla spec dell'utente
+      const noteTitle = this.extractNoteTitleFromSpec(userSpec);
+
+      // Genera il PDF
+      await pdfGen.generateCustomNote(botResponse, noteTitle);
+
+      this.addMessage('bot', '✅ Nota generata con successo! Il PDF è stato scaricato.');
+    } catch (error) {
+      console.error('Errore generazione nota:', error);
+      this.addMessage('bot', '❌ Errore durante la generazione del PDF. Controlla la console per dettagli.');
+    }
+  }
+
+  async generateFullReport() {
+    if (!this.financialData) {
+      alert('Dati finanziari non disponibili');
+      return;
+    }
+
+    this.addMessage('bot', '📊 **Generazione Report Completo in corso...**\n\nSto preparando il report finanziario completo di BFLOWS S.R.L. con tutte le sezioni e i grafici. Questo potrebbe richiedere qualche secondo...');
+
+    try {
+      // Crea il PDF Generator
+      const pdfGen = new PDFGenerator(this.financialData);
+
+      // Genera il report completo
+      await pdfGen.generateFullReport();
+
+      this.addMessage('bot', '✅ **Report Completo generato con successo!**\n\nIl report PDF è stato scaricato e include:\n\n• Executive Summary\n• Profilo Aziendale\n• Analisi Economica\n• Stato Patrimoniale\n• Indicatori Finanziari\n• Risk Assessment\n• Codice della Crisi\n• Raccomandazioni');
+    } catch (error) {
+      console.error('Errore generazione report:', error);
+      this.addMessage('bot', '❌ Errore durante la generazione del report. Controlla la console per dettagli.');
+    }
+  }
+
+  extractNoteTitleFromSpec(spec) {
+    // Estrai titolo intelligente dalla richiesta
+    spec = spec.toLowerCase();
+
+    if (spec.includes('liquidità') || spec.includes('cash')) {
+      return 'Analisi della Liquidità';
+    }
+    if (spec.includes('debito') || spec.includes('dscr')) {
+      return 'Analisi della Sostenibilità del Debito';
+    }
+    if (spec.includes('rischio') || spec.includes('rating')) {
+      return 'Valutazione del Rischio';
+    }
+    if (spec.includes('scenario') || spec.includes('previsione')) {
+      return 'Analisi di Scenario';
+    }
+    if (spec.includes('raccomandazioni') || spec.includes('miglioramento')) {
+      return 'Raccomandazioni Strategiche';
+    }
+
+    // Default
+    return 'Nota Finanziaria';
   }
 
   parseMarkdown(text) {
