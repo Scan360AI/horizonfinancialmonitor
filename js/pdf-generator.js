@@ -169,7 +169,7 @@ class PDFGenerator {
       },
 
       defaultStyle: {
-        font: 'Times',
+        font: 'Roboto',
         fontSize: 11,
         lineHeight: 1.6
       }
@@ -338,7 +338,7 @@ class PDFGenerator {
       },
 
       defaultStyle: {
-        font: 'Times',
+        font: 'Roboto',
         fontSize: 11,
         lineHeight: 1.6,
         color: '#1e293b'
