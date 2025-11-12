@@ -565,11 +565,29 @@ Esempio per "analisi liquidità":
 4. Criticità e Rischi
 5. Raccomandazioni Operative`;
 
-      const indexResponse = await this.callGeminiAPI(indexPrompt);
-      const indexLines = indexResponse.split('\n').filter(line => line.match(/^\d+\./));
+      let indexResponse;
+      try {
+        indexResponse = await this.callGeminiAPI(indexPrompt);
+        console.log('📋 Indice generato:', indexResponse);
+      } catch (apiError) {
+        console.error('❌ Errore chiamata API per indice:', apiError);
+        throw new Error(`Errore API nella generazione dell'indice: ${apiError.message}`);
+      }
+
+      if (!indexResponse || typeof indexResponse !== 'string') {
+        console.error('❌ Risposta API invalida:', indexResponse);
+        throw new Error('Risposta API non valida per la generazione dell\'indice');
+      }
+
+      const indexLines = indexResponse
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.match(/^\d+\./));
+
+      console.log('📑 Righe indice estratte:', indexLines);
 
       if (indexLines.length === 0) {
-        throw new Error('Impossibile generare indice strutturato');
+        throw new Error('L\'AI non ha generato un indice valido. Riprova con una richiesta più specifica.');
       }
 
       // Step 2: Sviluppa ogni capitolo
@@ -579,7 +597,12 @@ Esempio per "analisi liquidità":
       const noteTitle = this.extractNoteTitleFromSpec(userSpec);
 
       for (let i = 0; i < indexLines.length; i++) {
-        const chapterTitle = indexLines[i].replace(/^\d+\.\s*/, '');
+        const chapterTitle = indexLines[i].replace(/^\d+\.\s*/, '').trim();
+
+        if (!chapterTitle) {
+          console.warn(`⚠️ Capitolo ${i+1} ha titolo vuoto, skip`);
+          continue;
+        }
 
         // Feedback progresso
         this.addMessage('bot', `⏳ Sviluppo capitolo ${i+1}/${indexLines.length}: *${chapterTitle}*`);
@@ -598,15 +621,26 @@ Scrivi 2-4 paragrafi dettagliati per questo capitolo. Usa:
 
 Usa formato Markdown (##, **, -, ecc.)`;
 
-        const chapterContent = await this.callGeminiAPI(chapterPrompt);
+        let chapterContent;
+        try {
+          chapterContent = await this.callGeminiAPI(chapterPrompt);
+          console.log(`✅ Capitolo ${i+1} generato (${chapterContent.length} caratteri)`);
+        } catch (chapterError) {
+          console.error(`❌ Errore generazione capitolo ${i+1}:`, chapterError);
+          chapterContent = `*Errore nella generazione di questo capitolo: ${chapterError.message}*`;
+        }
 
         // Assembla contenuto
         fullContent += `\n\n## ${chapterTitle}\n\n${chapterContent}\n`;
 
         // Piccola pausa per evitare rate limit
         if (i < indexLines.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise(resolve => setTimeout(resolve, 1500));
         }
+      }
+
+      if (!fullContent || fullContent.trim().length === 0) {
+        throw new Error('Nessun contenuto generato per la nota');
       }
 
       // Step 3: Genera PDF
@@ -618,8 +652,9 @@ Usa formato Markdown (##, **, -, ecc.)`;
       this.addMessage('bot', `✅ **Nota completata con successo!**\n\nLa nota "${noteTitle}" è stata generata con ${indexLines.length} capitoli sviluppati e scaricata in formato PDF.`);
 
     } catch (error) {
-      console.error('Errore generazione nota:', error);
-      this.addMessage('bot', `❌ Errore durante la generazione della nota: ${error.message}\n\nRiprova o chiedi una nota più semplice.`);
+      console.error('❌ Errore completo generazione nota:', error);
+      console.error('Stack trace:', error.stack);
+      this.addMessage('bot', `❌ **Errore durante la generazione della nota**\n\n${error.message}\n\n💡 Suggerimento: Prova a:\n- Richiedere una nota più semplice\n- Verificare la connessione internet\n- Controllare la console del browser (F12) per dettagli`);
     }
   }
 
