@@ -664,19 +664,202 @@ Usa formato Markdown (##, **, -, ecc.)`;
       return;
     }
 
-    this.addMessage('bot', '📊 **Generazione Report Completo in corso...**\n\nSto preparando il report finanziario completo di BFLOWS S.R.L. con tutte le sezioni e i grafici. Questo potrebbe richiedere qualche secondo...');
+    if (!this.apiKey) {
+      alert('Configura prima la tua API key di Gemini per generare report AI-powered');
+      return;
+    }
 
     try {
-      // Crea il PDF Generator
+      // Mostra feedback iniziale
+      this.addMessage('bot', '📊 **Generazione Report Completo AI-Powered in corso...**\n\nSto creando un report finanziario professionale completo con analisi approfondita. Questo richiederà 1-2 minuti...');
+
+      // Indice predefinito (8 sezioni standard)
+      const predefinedIndex = [
+        'Executive Summary',
+        'Profilo Aziendale',
+        'Analisi Economica',
+        'Stato Patrimoniale',
+        'Indicatori Finanziari',
+        'Risk Assessment',
+        'Codice della Crisi',
+        'Raccomandazioni Strategiche'
+      ];
+
+      this.addMessage('bot', `📑 **Indice Report:** ${predefinedIndex.length} sezioni predefinite\n\n📖 Sviluppo contenuti...`);
+
+      let fullContent = '';
+      const reportTitle = `Report Finanziario Completo - ${this.financialData.company.name}`;
+
+      // Sviluppa ogni sezione con AI
+      for (let i = 0; i < predefinedIndex.length; i++) {
+        const sectionTitle = predefinedIndex[i];
+
+        // Feedback progresso
+        this.addMessage('bot', `⏳ Sviluppo sezione ${i+1}/${predefinedIndex.length}: *${sectionTitle}*`);
+
+        // Prompt specifico per ogni sezione
+        const sectionPrompt = this.buildSectionPrompt(sectionTitle);
+
+        let sectionContent;
+        try {
+          sectionContent = await this.callGeminiAPI(sectionPrompt);
+          console.log(`✅ Sezione ${i+1} generata: ${sectionTitle} (${sectionContent.length} caratteri)`);
+        } catch (sectionError) {
+          console.error(`❌ Errore generazione sezione ${i+1}:`, sectionError);
+          sectionContent = `*Errore nella generazione di questa sezione: ${sectionError.message}*`;
+        }
+
+        // Assembla contenuto
+        fullContent += `\n\n## ${sectionTitle}\n\n${sectionContent}\n`;
+
+        // Pausa per rate limiting (tranne all'ultima iterazione)
+        if (i < predefinedIndex.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1500));
+        }
+      }
+
+      if (!fullContent || fullContent.trim().length === 0) {
+        throw new Error('Nessun contenuto generato per il report');
+      }
+
+      // Genera PDF
+      this.addMessage('bot', '📄 **Generazione PDF finale...**');
+
       const pdfGen = new PDFGenerator(this.financialData);
+      await pdfGen.generateCustomNote(fullContent, reportTitle);
 
-      // Genera il report completo
-      await pdfGen.generateFullReport();
+      this.addMessage('bot', `✅ **Report Completo generato con successo!**\n\nIl report AI-powered "${reportTitle}" è stato scaricato con ${predefinedIndex.length} sezioni complete:\n\n${predefinedIndex.map((s, i) => `${i+1}. ${s}`).join('\n')}`);
 
-      this.addMessage('bot', '✅ **Report Completo generato con successo!**\n\nIl report PDF è stato scaricato e include:\n\n• Executive Summary\n• Profilo Aziendale\n• Analisi Economica\n• Stato Patrimoniale\n• Indicatori Finanziari\n• Risk Assessment\n• Codice della Crisi\n• Raccomandazioni');
     } catch (error) {
-      console.error('Errore generazione report:', error);
-      this.addMessage('bot', '❌ Errore durante la generazione del report. Controlla la console per dettagli.');
+      console.error('❌ Errore completo generazione report:', error);
+      console.error('Stack trace:', error.stack);
+      this.addMessage('bot', `❌ **Errore durante la generazione del report**\n\n${error.message}\n\n💡 Suggerimento: Prova a:\n- Verificare la connessione internet\n- Controllare la console del browser (F12) per dettagli\n- Riprovare tra qualche secondo`);
+    }
+  }
+
+  buildSectionPrompt(sectionTitle) {
+    const data = this.financialData;
+
+    // Prompt base comune
+    const baseInstructions = `Scrivi una sezione professionale e dettagliata per un report finanziario.
+
+**Azienda:** ${data.company.name}
+**Settore:** ${data.company.ateco}
+**Data Report:** ${data.reportInfo.date}
+
+Usa formato Markdown con:
+- **Grassetti** per dati chiave
+- Liste puntate per enumerare elementi
+- Linguaggio professionale ma chiaro
+- Riferimenti specifici ai dati forniti
+
+Scrivi 3-5 paragrafi ben strutturati.`;
+
+    // Prompt specifici per ogni sezione
+    switch(sectionTitle) {
+      case 'Executive Summary':
+        return `${baseInstructions}
+
+**Sezione:** Executive Summary
+
+Fornisci una sintesi esecutiva del report con:
+- Snapshot della situazione finanziaria attuale (Ricavi €${data.keyMetrics.find(m => m.id === 'revenues')?.value}, EBITDA, Rating ${data.riskAssessment.rating})
+- Principali punti di forza (es: ${data.executiveSummary.strengths[0]})
+- Criticità principali (es: ${data.executiveSummary.weaknesses[0]})
+- Valutazione rischio complessivo (Score ${data.riskAssessment.score}/100)
+- Outlook e direzione aziendale`;
+
+      case 'Profilo Aziendale':
+        return `${baseInstructions}
+
+**Sezione:** Profilo Aziendale
+
+Descrivi il profilo dell'azienda includendo:
+- Dati anagrafici: fondata ${data.company.foundedDate}, ${data.company.employees.current} dipendenti
+- Capitale sociale: €${data.company.capitaleSociale.toLocaleString('it-IT')}
+- Settore di attività: ${data.company.ateco}
+- Storia e crescita (dipendenti: ${data.company.employees.previous} → ${data.company.employees.current})
+- Posizionamento di mercato`;
+
+      case 'Analisi Economica':
+        return `${baseInstructions}
+
+**Sezione:** Analisi Economica
+
+Analizza la performance economica:
+- Ricavi 2024: ${data.keyMetrics.find(m => m.id === 'revenues')?.value} (trend: ${data.keyMetrics.find(m => m.id === 'revenues')?.trend?.value}%)
+- EBITDA: ${data.financialData.stats.find(s => s.id === 'ebitda')?.value} (Margin: ${data.keyMetrics.find(m => m.id === 'ebitda-margin')?.value})
+- Utile Netto: ${data.financialData.stats.find(s => s.id === 'utile')?.value}
+- Trend evolutivi e confronti anno su anno
+- Analisi della marginalità e redditività`;
+
+      case 'Stato Patrimoniale':
+        return `${baseInstructions}
+
+**Sezione:** Stato Patrimoniale
+
+Analizza la struttura patrimoniale:
+- Patrimonio Netto: ${data.financialData.stats.find(s => s.id === 'patrimonio')?.value}
+- Totale Attivo e composizione
+- Disponibilità liquide e attivo circolante
+- Struttura del passivo e indebitamento
+- Solidità patrimoniale`;
+
+      case 'Indicatori Finanziari':
+        return `${baseInstructions}
+
+**Sezione:** Indicatori Finanziari
+
+Analizza i principali indicatori:
+- ROE: ${data.financialData.stats.find(s => s.id === 'roe')?.value}
+- ROI: ${data.financialData.stats.find(s => s.id === 'roi')?.value}
+- ROS: ${data.financialData.stats.find(s => s.id === 'ros')?.value}
+- Liquidità Corrente: ${data.keyMetrics.find(m => m.id === 'liquidity')?.value}
+- DSCR: ${data.keyMetrics.find(m => m.id === 'dscr')?.value}
+- DSO: ${data.keyMetrics.find(m => m.id === 'dso')?.value} giorni
+- Interpretazione e benchmark di settore`;
+
+      case 'Risk Assessment':
+        return `${baseInstructions}
+
+**Sezione:** Risk Assessment
+
+Valuta il profilo di rischio:
+- Indice di Rischio Ponderato: ${data.riskAssessment.score}/100
+- Rating: ${data.riskAssessment.rating} (categoria ${data.riskAssessment.categoryLabel})
+- Profili di rischio dettagliati: ${data.profiles.map(p => `${p.name} (${p.score}/5)`).join(', ')}
+- Fattori di rischio principali
+- Mitiganti e elementi positivi`;
+
+      case 'Codice della Crisi':
+        return `${baseInstructions}
+
+**Sezione:** Codice della Crisi
+
+Analizza gli indici del Codice della Crisi d'Impresa:
+- Status generale: ${data.codiceCrisi.status.overall} (${data.codiceCrisi.status.indiciOk} OK, ${data.codiceCrisi.status.indiciAllerta} in allerta)
+- Indici analizzati: ${data.codiceCrisi.indices.map(i => `${i.name}: ${i.value} (${i.status})`).join('; ')}
+- Conformità normativa
+- Aree di attenzione e monitoraggio`;
+
+      case 'Raccomandazioni Strategiche':
+        return `${baseInstructions}
+
+**Sezione:** Raccomandazioni Strategiche
+
+Fornisci raccomandazioni concrete:
+- Raccomandazioni principali: ${data.outlook.raccomandazioni.join('; ')}
+- Outlook: ${data.outlook.outlook}
+- Azioni prioritarie nel breve termine (3-6 mesi)
+- Strategie di medio termine (1-2 anni)
+- KPI da monitorare costantemente`;
+
+      default:
+        return `${baseInstructions}
+
+**Sezione:** ${sectionTitle}
+
+Sviluppa questa sezione in modo professionale e dettagliato basandoti sui dati finanziari disponibili.`;
     }
   }
 
