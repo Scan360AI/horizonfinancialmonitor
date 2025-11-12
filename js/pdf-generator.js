@@ -1,7 +1,7 @@
-/**
- * PDF Generator for Financial Reports
- * Genera report PDF professionali con pdfmake
- */
+// ===========================
+// PDF GENERATOR MODULE
+// Using html2pdf.js for elegant PDF generation with CSS styling
+// ===========================
 
 class PDFGenerator {
   constructor(financialData) {
@@ -9,767 +9,96 @@ class PDFGenerator {
     this.logoBase64 = null;
   }
 
-  /**
-   * Carica il logo in formato Base64 per embedding nel PDF
-   */
+  // Load logo as base64
   async loadLogo() {
-    try {
-      const response = await fetch('/assets/images/logo.png');
-      const blob = await response.blob();
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-    } catch (error) {
-      console.error('Errore caricamento logo:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Genera report completo standard
-   */
-  async generateFullReport() {
-    if (!this.data) {
-      alert('Dati finanziari non disponibili');
-      return;
-    }
-
-    try {
-      // Carica logo (opzionale, se fallisce continua)
-      try {
-        this.logoBase64 = await this.loadLogo();
-      } catch (logoError) {
-        console.warn('Logo non caricato:', logoError);
-        this.logoBase64 = null;
-      }
-
-      // Genera grafici come immagini
-      const chartImages = await this.generateChartImages();
-
-      // Definizione documento PDF
-      const docDefinition = {
-        info: {
-          title: `Report Finanziario - ${this.data.company.name}`,
-          author: 'Horizon Financial Monitor',
-          subject: 'Analisi Finanziaria Completa',
-          keywords: 'financial report, analisi finanziaria, bilancio',
-          creator: 'Horizon Financial Monitor',
-          producer: 'pdfmake'
-        },
-        pageSize: 'A4',
-        pageMargins: [40, 60, 40, 60],
-
-        header: (currentPage, pageCount) => {
-          if (currentPage === 1) return null;
-          return {
-            margin: [40, 20, 40, 0],
-            columns: [
-              { text: 'Horizon Financial Monitor', style: 'headerText' },
-              { text: `Pagina ${currentPage} di ${pageCount}`, style: 'headerText', alignment: 'right' }
-            ]
-          };
-        },
-
-        footer: (currentPage, pageCount) => {
-          return {
-            margin: [40, 0, 40, 20],
-            columns: [
-              { text: `Report generato il ${this.data.reportInfo.date}`, fontSize: 8, color: '#64748b' },
-              { text: 'Riservato e Confidenziale', fontSize: 8, color: '#64748b', alignment: 'right' }
-            ]
-          };
-        },
-
-        content: [
-          ...this.generateCoverPage(),
-          { text: '', pageBreak: 'after' },
-          ...this.generateTableOfContents(),
-          { text: '', pageBreak: 'after' },
-          ...this.generateExecutiveSummary(),
-          { text: '', pageBreak: 'after' },
-          ...this.generateCompanyProfile(),
-          { text: '', pageBreak: 'after' },
-          ...this.generateEconomicAnalysis(chartImages),
-          { text: '', pageBreak: 'after' },
-          ...this.generateBalanceSheet(),
-          { text: '', pageBreak: 'after' },
-          ...this.generateFinancialIndicators(),
-          { text: '', pageBreak: 'after' },
-          ...this.generateRiskAssessment(chartImages),
-          { text: '', pageBreak: 'after' },
-          ...this.generateCrisisCode(),
-          { text: '', pageBreak: 'after' },
-          ...this.generateRecommendations()
-        ],
-
-        styles: {
-          coverTitle: {
-            fontSize: 32,
-            bold: true,
-            color: '#2f3e9e',
-            margin: [0, 20, 0, 10]
-          },
-          coverSubtitle: {
-          fontSize: 18,
-          color: '#64748b',
-          margin: [0, 0, 0, 40]
-        },
-        coverInfo: {
-          fontSize: 12,
-          color: '#475569',
-          margin: [0, 5, 0, 5]
-        },
-        h1: {
-          fontSize: 24,
-          bold: true,
-          color: '#2f3e9e',
-          margin: [0, 0, 0, 20]
-        },
-        h2: {
-          fontSize: 18,
-          bold: true,
-          color: '#2f3e9e',
-          margin: [0, 20, 0, 12]
-        },
-        h3: {
-          fontSize: 14,
-          bold: true,
-          color: '#475569',
-          margin: [0, 12, 0, 8]
-        },
-        normal: {
-          fontSize: 10,
-          lineHeight: 1.5
-        },
-        tableHeader: {
-          bold: true,
-          fontSize: 11,
-          color: 'white',
-          fillColor: '#2f3e9e'
-        },
-        positive: {
-          color: '#24b47e',
-          bold: true
-        },
-        negative: {
-          color: '#f5365c',
-          bold: true
-        },
-        warning: {
-          color: '#f9b115',
-          bold: true
-        },
-        headerText: {
-          fontSize: 9,
-          color: '#64748b'
-        }
-      },
-
-      defaultStyle: {
-        font: 'Roboto',
-        fontSize: 11,
-        lineHeight: 1.6
-      }
-    };
-
-      // Genera e scarica PDF
-      console.log('📄 Generazione PDF in corso...');
-      pdfMake.createPdf(docDefinition).download(`report-${this.data.company.name}-${this.getCurrentDate()}.pdf`);
-      console.log('✅ PDF generato con successo!');
-
-    } catch (error) {
-      console.error('❌ Errore generazione report:', error);
-      throw error; // Rilancia l'errore per il chatbot
-    }
-  }
-
-  /**
-   * Genera nota personalizzata basata su conversazione
-   */
-  async generateCustomNote(noteContent, noteTitle, chartImages = null) {
-    if (!this.data) {
-      alert('Dati finanziari non disponibili');
-      return;
-    }
-
-    this.logoBase64 = await this.loadLogo();
-
-    const docDefinition = {
-      info: {
-        title: noteTitle || 'Nota Finanziaria',
-        author: 'Horizon Financial Monitor',
-        creator: 'Horizon Financial Monitor - AI Assistant'
-      },
-      pageSize: 'A4',
-      pageMargins: [40, 60, 40, 60],
-
-      header: (currentPage, pageCount) => {
-        if (currentPage === 1) return null;
-        return {
-          margin: [40, 20, 40, 0],
-          text: noteTitle || 'Nota Finanziaria',
-          style: 'headerText'
-        };
-      },
-
-      footer: (currentPage, pageCount) => {
-        return {
-          margin: [40, 0, 40, 20],
-          columns: [
-            { text: `Nota generata il ${new Date().toLocaleDateString('it-IT')}`, fontSize: 8, color: '#64748b' },
-            { text: `Pagina ${currentPage} di ${pageCount}`, fontSize: 8, color: '#64748b', alignment: 'right' }
-          ]
-        };
-      },
-
-      content: [
-        // Cover box elegante
-        {
-          columns: [
-            this.logoBase64 ? { image: this.logoBase64, width: 100 } : {},
-            {
-              width: '*',
-              stack: [
-                { text: noteTitle || 'Nota Finanziaria', style: 'h1', margin: [0, 10, 0, 5] },
-                { text: this.data.company.name, style: 'coverSubtitle' },
-                {
-                  text: new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' }),
-                  fontSize: 10,
-                  color: '#94a3b8',
-                  margin: [0, 8, 0, 0]
-                }
-              ]
-            }
-          ],
-          margin: [0, 0, 0, 25]
-        },
-        // Linea separatore elegante
-        {
-          canvas: [{
-            type: 'rect',
-            x: 0,
-            y: 0,
-            w: 515,
-            h: 3,
-            r: 2,
-            color: '#3b82f6'
-          }],
-          margin: [0, 0, 0, 30]
-        },
-
-        // Contenuto della nota (convertito da markdown con grafici)
-        ...this.parseMarkdownToPDFContent(noteContent, chartImages),
-
-        // Disclaimer elegante
-        { text: '', margin: [0, 40, 0, 0] },
-        {
-          stack: [
-            {
-              text: [
-                { text: '⚠️  ', fontSize: 12 },
-                { text: 'Disclaimer', bold: true, fontSize: 10 }
-              ],
-              margin: [0, 0, 0, 8],
-              color: '#64748b'
-            },
-            {
-              text: 'Questo documento è stato generato automaticamente da un assistente AI basato sui dati finanziari disponibili. Le informazioni contenute sono fornite a scopo informativo e non costituiscono consulenza finanziaria professionale.',
-              fontSize: 9,
-              color: '#64748b',
-              italics: true,
-              lineHeight: 1.4
-            }
-          ],
-          background: '#f8fafc',
-          fillColor: '#f8fafc',
-          margin: [0, 0, 0, 0],
-          padding: [12, 12, 12, 12]
-        }
-      ],
-
-      styles: {
-        h1: {
-          fontSize: 26,
-          bold: true,
-          color: '#1e293b',
-          margin: [0, 0, 0, 16],
-          decoration: 'underline',
-          decorationStyle: 'solid',
-          decorationColor: '#3b82f6'
-        },
-        h2: {
-          fontSize: 19,
-          bold: true,
-          color: '#0f172a',
-          margin: [0, 20, 0, 12],
-          background: '#f1f5f9',
-          fillColor: '#f1f5f9'
-        },
-        h3: {
-          fontSize: 15,
-          bold: true,
-          color: '#334155',
-          margin: [0, 14, 0, 10]
-        },
-        coverSubtitle: {
-          fontSize: 16,
-          color: '#64748b',
-          margin: [0, 5, 0, 0]
-        },
-        headerText: {
-          fontSize: 9,
-          color: '#94a3b8'
-        },
-        tableHeader: {
-          bold: true,
-          fontSize: 11,
-          color: 'white',
-          fillColor: '#3b82f6',
-          alignment: 'left'
-        },
-        normal: {
-          fontSize: 11,
-          lineHeight: 1.6,
-          color: '#334155'
-        }
-      },
-
-      defaultStyle: {
-        font: 'Roboto',
-        fontSize: 11,
-        lineHeight: 1.6,
-        color: '#1e293b'
-      }
-    };
-
-    // Genera filename sicuro
-    const safeTitle = (noteTitle || 'nota')
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, '-')
-      .replace(/-+/g, '-')
-      .substring(0, 50);
-
-    pdfMake.createPdf(docDefinition).download(`nota-${safeTitle}-${this.getCurrentDate()}.pdf`);
-  }
-
-  /**
-   * Genera Report Completo Professionale con cover page elegante, tabelle JSON e box visivi
-   */
-  async generateProfessionalReport(aiSections, chartImages = null) {
-    if (!this.data) {
-      alert('Dati finanziari non disponibili');
-      return;
-    }
-
-    this.logoBase64 = await this.loadLogo();
-
-    const docDefinition = {
-      info: {
-        title: `Report Finanziario Completo - ${this.data.company.name}`,
-        author: 'Horizon Financial Monitor',
-        creator: 'Horizon Financial Monitor - AI Assistant',
-        subject: 'Analisi Finanziaria Completa'
-      },
-      pageSize: 'A4',
-      pageMargins: [50, 70, 50, 70],
-
-      header: (currentPage, pageCount) => {
-        if (currentPage === 1) return null; // No header on cover
-        return {
-          margin: [50, 25, 50, 0],
-          columns: [
-            {
-              text: 'Report Finanziario Completo',
-              fontSize: 9,
-              color: '#94a3b8'
-            },
-            {
-              text: this.data.company.name,
-              fontSize: 9,
-              color: '#94a3b8',
-              alignment: 'right'
-            }
-          ]
-        };
-      },
-
-      footer: (currentPage, pageCount) => {
-        if (currentPage === 1) return null; // No footer on cover
-        return {
-          margin: [50, 0, 50, 25],
-          columns: [
-            {
-              text: `Generato il ${new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })}`,
-              fontSize: 8,
-              color: '#94a3b8'
-            },
-            {
-              text: `Pagina ${currentPage - 1} di ${pageCount - 1}`,
-              fontSize: 8,
-              color: '#94a3b8',
-              alignment: 'right'
-            }
-          ]
-        };
-      },
-
-      content: [
-        // 🎨 COVER PAGE ELEGANTE
-        ...this.generateElegantCover(),
-
-        // Page break dopo cover
-        { text: '', pageBreak: 'after' },
-
-        // 📊 CONTENUTO REPORT
-        ...this.buildReportContent(aiSections, chartImages)
-      ],
-
-      styles: {
-        coverTitle: {
-          fontSize: 32,
-          bold: true,
-          color: '#1e293b',
-          margin: [0, 0, 0, 12]
-        },
-        coverSubtitle: {
-          fontSize: 20,
-          color: '#64748b',
-          margin: [0, 0, 0, 8]
-        },
-        coverDate: {
-          fontSize: 14,
-          color: '#94a3b8',
-          margin: [0, 0, 0, 0]
-        },
-        h1: {
-          fontSize: 26,
-          bold: true,
-          color: '#1e293b',
-          margin: [0, 24, 0, 16],
-          decoration: 'underline',
-          decorationStyle: 'solid',
-          decorationColor: '#3b82f6'
-        },
-        h2: {
-          fontSize: 19,
-          bold: true,
-          color: '#0f172a',
-          margin: [0, 20, 0, 12],
-          fillColor: '#f1f5f9'
-        },
-        h3: {
-          fontSize: 15,
-          bold: true,
-          color: '#334155',
-          margin: [0, 14, 0, 10]
-        },
-        tableHeader: {
-          bold: true,
-          fontSize: 11,
-          color: 'white',
-          fillColor: '#3b82f6',
-          alignment: 'left'
-        },
-        normal: {
-          fontSize: 11,
-          lineHeight: 1.6,
-          color: '#334155'
-        },
-        boxTitle: {
-          fontSize: 13,
-          bold: true,
-          color: '#1e293b',
-          margin: [0, 0, 0, 10]
-        },
-        boxContent: {
-          fontSize: 11,
-          lineHeight: 1.5,
-          color: '#334155'
-        }
-      },
-
-      defaultStyle: {
-        font: 'Roboto',
-        fontSize: 11,
-        lineHeight: 1.6,
-        color: '#1e293b'
-      }
-    };
-
-    // Download PDF
-    const fileName = `report-completo-${this.data.company.name.toLowerCase().replace(/\s/g, '-')}-${this.getCurrentDate()}.pdf`;
-    pdfMake.createPdf(docDefinition).download(fileName);
-  }
-
-  /**
-   * Genera Cover Page elegante
-   */
-  generateElegantCover() {
-    const currentDate = new Date();
-    const monthYear = currentDate.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
-
-    return [
-      // Spacing top
-      { text: '', margin: [0, 80, 0, 0] },
-
-      // Logo centrato
-      this.logoBase64
-        ? {
-            image: this.logoBase64,
-            width: 160,
-            alignment: 'center',
-            margin: [0, 0, 0, 50]
-          }
-        : { text: '', margin: [0, 0, 0, 30] },
-
-      // Titolo principale
-      {
-        text: 'REPORT FINANZIARIO\nCOMPLETO',
-        style: 'coverTitle',
-        alignment: 'center',
-        lineHeight: 1.2
-      },
-
-      // Nome azienda
-      {
-        text: this.data.company.name,
-        style: 'coverSubtitle',
-        alignment: 'center'
-      },
-
-      // Data
-      {
-        text: monthYear.charAt(0).toUpperCase() + monthYear.slice(1),
-        style: 'coverDate',
-        alignment: 'center',
-        margin: [0, 0, 0, 40]
-      },
-
-      // Decorazione - box con rating
-      {
-        table: {
-          widths: ['*'],
-          body: [
-            [
-              {
-                stack: [
-                  {
-                    text: 'RATING',
-                    fontSize: 11,
-                    color: '#64748b',
-                    margin: [0, 0, 0, 8],
-                    alignment: 'center'
-                  },
-                  {
-                    text: this.data.riskAssessment.rating,
-                    fontSize: 36,
-                    bold: true,
-                    color: this.getRatingColor(),
-                    alignment: 'center',
-                    margin: [0, 0, 0, 5]
-                  },
-                  {
-                    text: this.data.riskAssessment.categoryLabel,
-                    fontSize: 13,
-                    color: '#64748b',
-                    alignment: 'center'
-                  }
-                ],
-                border: [false, false, false, false],
-                margin: [20, 20, 20, 20]
-              }
-            ]
-          ]
-        },
-        layout: {
-          hLineWidth: () => 2,
-          vLineWidth: () => 2,
-          hLineColor: () => '#3b82f6',
-          vLineColor: () => '#3b82f6',
-          paddingTop: () => 15,
-          paddingBottom: () => 15
-        },
-        margin: [80, 0, 80, 60]
-      },
-
-      // Footer cover
-      {
-        columns: [
-          {
-            width: '*',
-            text: [
-              { text: 'Settore: ', fontSize: 10, color: '#64748b' },
-              { text: this.data.company.ateco, fontSize: 10, color: '#334155', bold: true }
-            ]
-          },
-          {
-            width: '*',
-            text: [
-              { text: 'Dipendenti: ', fontSize: 10, color: '#64748b' },
-              { text: `${this.data.company.employees.current}`, fontSize: 10, color: '#334155', bold: true }
-            ],
-            alignment: 'right'
-          }
-        ],
-        margin: [0, 0, 0, 0]
-      }
-    ];
-  }
-
-  /**
-   * Costruisce il contenuto del report mescolando AI + JSON
-   */
-  buildReportContent(aiSections, chartImages) {
-    const content = [];
-
-    // Parse sections dal markdown AI
-    const sections = this.parseSections(aiSections);
-
-    sections.forEach((section) => {
-      const title = section.title;
-      const aiContent = section.content;
-
-      // Aggiungi titolo sezione
-      content.push({
-        text: title,
-        style: 'h1',
-        pageBreak: content.length > 0 ? 'before' : undefined
-      });
-
-      // Aggiungi contenuto AI parsato
-      content.push(...this.parseMarkdownToPDFContent(aiContent));
-
-      // Aggiungi elementi JSON specifici per sezione
-      switch (title.toLowerCase()) {
-        case 'executive summary':
-          content.push(...this.generateKeyMetricsBoxes());
-          break;
-
-        case 'analisi economica':
-          content.push(...this.generateContoEconomicoTable());
-          if (chartImages?.economicTrend) {
-            content.push({
-              image: chartImages.economicTrend,
-              width: 480,
-              alignment: 'center',
-              margin: [0, 20, 0, 20]
-            });
-          }
-          break;
-
-        case 'stato patrimoniale':
-          content.push(...this.generateStatoPatrimonialeTable());
-          if (chartImages?.workingCapital) {
-            content.push({
-              image: chartImages.workingCapital,
-              width: 480,
-              alignment: 'center',
-              margin: [0, 20, 0, 20]
-            });
-          }
-          break;
-
-        case 'indicatori finanziari':
-          if (chartImages?.debtSustainability) {
-            content.push({
-              image: chartImages.debtSustainability,
-              width: 480,
-              alignment: 'center',
-              margin: [0, 15, 0, 15]
-            });
-          }
-          if (chartImages?.stressTest) {
-            content.push({
-              image: chartImages.stressTest,
-              width: 480,
-              alignment: 'center',
-              margin: [0, 15, 0, 20]
-            });
-          }
-          break;
-
-        case 'risk assessment':
-          content.push(...this.generateRiskBox());
-          if (chartImages?.benchmarkRadar) {
-            content.push({
-              image: chartImages.benchmarkRadar,
-              width: 350,
-              alignment: 'center',
-              margin: [0, 20, 0, 20]
-            });
-          }
-          break;
-
-        case 'codice della crisi':
-          content.push(...this.generateCodiceCrisiBox());
-          break;
-      }
-
-      // Spacing tra sezioni
-      content.push({ text: '', margin: [0, 0, 0, 20] });
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = 'Anonymous';
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        this.logoBase64 = canvas.toDataURL('image/png');
+        resolve();
+      };
+      img.onerror = () => {
+        console.warn('Could not load logo');
+        resolve();
+      };
+      img.src = 'assets/images/logo.png';
     });
-
-    // Disclaimer finale
-    content.push(
-      { text: '', margin: [0, 40, 0, 0] },
-      {
-        stack: [
-          {
-            text: [
-              { text: '⚠️  ', fontSize: 12 },
-              { text: 'Disclaimer', bold: true, fontSize: 10 }
-            ],
-            margin: [0, 0, 0, 8],
-            color: '#64748b'
-          },
-          {
-            text: 'Questo documento è stato generato automaticamente da un assistente AI basato sui dati finanziari disponibili. Le informazioni contenute sono fornite a scopo informativo e non costituiscono consulenza finanziaria professionale.',
-            fontSize: 9,
-            color: '#64748b',
-            italics: true,
-            lineHeight: 1.4
-          }
-        ],
-        background: '#f8fafc',
-        fillColor: '#f8fafc',
-        margin: [0, 0, 0, 0]
-      }
-    );
-
-    return content;
   }
 
-  /**
-   * Parse sections dal markdown AI
-   */
-  parseSections(markdown) {
+  // Main method: Generate professional report with html2pdf
+  async generateProfessionalReport(aiContent, chartImages = null) {
+    try {
+      console.log('📄 Generating professional report with html2pdf...');
+      await this.loadLogo();
+
+      const sections = this.parseSections(aiContent);
+      const htmlContent = this.buildReportHTML(sections, chartImages);
+
+      // Create temporary container
+      const tempDiv = document.createElement('div');
+      tempDiv.style.cssText = 'position: absolute; left: -9999px; top: 0;';
+      tempDiv.innerHTML = htmlContent;
+      document.body.appendChild(tempDiv);
+
+      const companyNameSlug = this.data.company.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+      const filename = 'report-' + companyNameSlug + '-' + this.getCurrentDate() + '.pdf';
+
+      // Configure html2pdf
+      const opt = {
+        margin: [10, 10, 10, 10],
+        filename: filename,
+        image: { type: 'jpeg', quality: 0.95 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          letterRendering: true
+        },
+        jsPDF: {
+          unit: 'mm',
+          format: 'a4',
+          orientation: 'portrait'
+        },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+      };
+
+      await html2pdf().set(opt).from(tempDiv.firstChild).save();
+
+      document.body.removeChild(tempDiv);
+
+      console.log('✅ Professional report generated successfully');
+    } catch (error) {
+      console.error('❌ Error generating professional report:', error);
+      throw error;
+    }
+  }
+
+  // Parse AI content into sections
+  parseSections(aiContent) {
     const sections = [];
-    const lines = markdown.split('\n');
+    const lines = aiContent.split('\n');
     let currentSection = null;
 
-    lines.forEach((line) => {
-      // Rileva header H2 (## Titolo)
-      const h2Match = line.match(/^##\s+(.+)/);
-      if (h2Match) {
-        // Salva sezione precedente
+    for (const line of lines) {
+      if (line.startsWith('## ')) {
         if (currentSection) {
           sections.push(currentSection);
         }
-        // Inizia nuova sezione
         currentSection = {
-          title: h2Match[1].trim(),
-          content: ''
+          title: line.replace('## ', '').trim(),
+          content: []
         };
-      } else if (currentSection) {
-        // Aggiungi contenuto alla sezione corrente
-        currentSection.content += line + '\n';
+      } else if (currentSection && line.trim()) {
+        currentSection.content.push(line);
       }
-    });
+    }
 
-    // Aggiungi ultima sezione
     if (currentSection) {
       sections.push(currentSection);
     }
@@ -777,923 +106,555 @@ class PDFGenerator {
     return sections;
   }
 
-  /**
-   * Genera box metriche chiave per Executive Summary
-   */
+  // Build complete HTML for report
+  buildReportHTML(sections, chartImages) {
+    const currentDate = this.getFormattedDate();
+
+    return '<div class="report-container" style="' + this.getBaseStyles() + '">' +
+      this.generateCoverPage(currentDate) +
+      this.generateContentPages(sections, chartImages) +
+      '</div>';
+  }
+
+  // Get base inline styles
+  getBaseStyles() {
+    return 'font-family: "Times New Roman", Times, serif; color: #1A1F36; font-size: 11pt; line-height: 1.6; background: white;';
+  }
+
+  // Generate elegant cover page
+  generateCoverPage(currentDate) {
+    const company = this.data.company.name;
+    const rating = this.data.riskAssessment.rating;
+    const categoryLabel = this.data.riskAssessment.categoryLabel;
+
+    let html = '<div style="height: 297mm; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; page-break-after: always; padding: 3rem;">';
+
+    if (this.logoBase64) {
+      html += '<img src="' + this.logoBase64 + '" alt="Logo" style="width: 120px; height: auto; margin-bottom: 3rem;">';
+    }
+
+    html += '<h1 style="font-size: 36pt; font-weight: 700; color: #1A1F36; margin: 0 0 1rem 0; line-height: 1.2;">' +
+      'REPORT FINANZIARIO<br>COMPLETO' +
+      '</h1>';
+
+    html += '<div style="font-size: 20pt; font-weight: 600; color: #4F566B; margin-bottom: 0.5rem;">' +
+      company +
+      '</div>';
+
+    html += '<div style="font-size: 14pt; color: #697386; margin-bottom: 3rem;">' +
+      currentDate +
+      '</div>';
+
+    html += '<div style="border: 3px solid #635BFF; border-radius: 16px; padding: 2.5rem 3rem; margin: 2rem auto; background: white; box-shadow: 0 4px 12px rgba(99, 91, 255, 0.15);">' +
+      '<div style="font-size: 10pt; color: #697386; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem;">' +
+      'Rating Aziendale' +
+      '</div>' +
+      '<div style="font-size: 48pt; font-weight: 700; color: #635BFF; margin: 0.5rem 0; line-height: 1;">' +
+      rating +
+      '</div>' +
+      '<div style="font-size: 12pt; color: #4F566B; font-weight: 500;">' +
+      categoryLabel +
+      '</div>' +
+      '</div>';
+
+    html += '</div>';
+    return html;
+  }
+
+  // Generate content pages
+  generateContentPages(sections, chartImages) {
+    let html = '';
+
+    for (let i = 0; i < sections.length; i++) {
+      const section = sections[i];
+      const sectionTitle = section.title;
+      const sectionLower = sectionTitle.toLowerCase();
+
+      html += '<div style="' + (i > 0 ? 'page-break-before: always; ' : '') + 'padding: 2rem;">';
+      html += '<h2 style="font-size: 18pt; font-weight: 700; color: #635BFF; margin: 0 0 1.5rem 0; padding-bottom: 0.5rem; border-bottom: 2px solid #E3E8EE;">' + sectionTitle + '</h2>';
+
+      // Add special content based on section
+      if (sectionLower.includes('executive summary')) {
+        html += this.generateKeyMetricsBoxes();
+        html += this.generateSummaryCards();
+      }
+
+      if (sectionLower.includes('analisi economica') || sectionLower.includes('conto economico')) {
+        html += this.generateContoEconomicoTable();
+        if (chartImages && chartImages.economicTrend) {
+          html += '<div style="margin: 2rem 0; text-align: center; page-break-inside: avoid;">' +
+            '<img src="' + chartImages.economicTrend + '" style="max-width: 100%; height: auto;">' +
+            '</div>';
+        }
+      }
+
+      if (sectionLower.includes('stato patrimoniale')) {
+        html += this.generateStatoPatrimonialeTable();
+      }
+
+      if (sectionLower.includes('risk assessment') || sectionLower.includes('rischio')) {
+        html += this.generateRiskBox();
+        if (chartImages && chartImages.benchmarkRadar) {
+          html += '<div style="margin: 2rem 0; text-align: center; page-break-inside: avoid;">' +
+            '<img src="' + chartImages.benchmarkRadar + '" style="max-width: 80%; height: auto;">' +
+            '</div>';
+        }
+      }
+
+      if (sectionLower.includes('codice della crisi')) {
+        html += this.generateCodiceCrisiIndicators();
+      }
+
+      // Add AI-generated content
+      const content = section.content.join('\n');
+      html += this.markdownToHTML(content);
+
+      // Add relevant charts
+      if (sectionLower.includes('sostenibilità') || sectionLower.includes('debt')) {
+        if (chartImages && chartImages.debtSustainability) {
+          html += '<div style="margin: 2rem 0; text-align: center; page-break-inside: avoid;">' +
+            '<img src="' + chartImages.debtSustainability + '" style="max-width: 100%; height: auto;">' +
+            '</div>';
+        }
+      }
+
+      if (sectionLower.includes('capitale') || sectionLower.includes('working capital')) {
+        if (chartImages && chartImages.workingCapital) {
+          html += '<div style="margin: 2rem 0; text-align: center; page-break-inside: avoid;">' +
+            '<img src="' + chartImages.workingCapital + '" style="max-width: 100%; height: auto;">' +
+            '</div>';
+        }
+      }
+
+      if (sectionLower.includes('stress')) {
+        if (chartImages && chartImages.stressTest) {
+          html += '<div style="margin: 2rem 0; text-align: center; page-break-inside: avoid;">' +
+            '<img src="' + chartImages.stressTest + '" style="max-width: 100%; height: auto;">' +
+            '</div>';
+        }
+      }
+
+      html += '</div>';
+    }
+
+    return html;
+  }
+
+  // Generate key metrics boxes (4-column grid)
   generateKeyMetricsBoxes() {
-    const metrics = [
-      { label: 'Ricavi 2024', value: this.data.keyMetrics.find(m => m.id === 'revenues')?.value || 'N/D', trend: this.data.keyMetrics.find(m => m.id === 'revenues')?.trend?.value },
-      { label: 'EBITDA Margin', value: this.data.keyMetrics.find(m => m.id === 'ebitda-margin')?.value || 'N/D' },
-      { label: 'DSCR', value: this.data.keyMetrics.find(m => m.id === 'dscr')?.value || 'N/D' },
-      { label: 'Liquidità Corrente', value: this.data.keyMetrics.find(m => m.id === 'liquidity')?.value || 'N/D' }
-    ];
+    if (!this.data.keyMetrics) return '';
 
-    return [
-      { text: 'Principali Indicatori', style: 'h3', margin: [0, 20, 0, 15] },
-      {
-        columns: metrics.map(m => ({
-          width: '*',
-          stack: [
-            { text: m.label, fontSize: 9, color: '#64748b', margin: [0, 0, 0, 5] },
-            { text: m.value, fontSize: 16, bold: true, color: '#1e293b' },
-            m.trend ? { text: `${m.trend > 0 ? '↑' : '↓'} ${Math.abs(m.trend)}%`, fontSize: 9, color: m.trend > 0 ? '#10b981' : '#ef4444', margin: [0, 3, 0, 0] } : {}
-          ],
-          margin: [10, 10, 10, 10],
-          fillColor: '#f8fafc'
-        })),
-        columnGap: 10,
-        margin: [0, 0, 0, 20]
-      }
-    ];
-  }
+    const metrics = this.data.keyMetrics.slice(0, 4);
+    let html = '<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin: 2rem 0; page-break-inside: avoid;">';
 
-  /**
-   * Genera tabella Conto Economico completa
-   */
-  generateContoEconomicoTable() {
-    // Cerca i dati del conto economico nel JSON
-    const ce = this.data.noteTecniche?.find(n => n.title === 'Conto Economico');
-    if (!ce || !ce.contoEconomico) {
-      return [{ text: 'Dati Conto Economico non disponibili', fontSize: 10, color: '#64748b', margin: [0, 10, 0, 10] }];
-    }
+    metrics.forEach(m => {
+      const trendColor = m.trend > 0 ? '#00D924' : m.trend < 0 ? '#DF1B41' : '#697386';
+      const trendSymbol = m.trend > 0 ? '↑' : m.trend < 0 ? '↓' : '→';
 
-    const ricavi = ce.contoEconomico.ricavi || {};
-    const costi = ce.contoEconomico.costi || {};
-    const risultati = ce.contoEconomico.risultati || {};
+      html += '<div style="background: white; border: 1px solid #E3E8EE; border-radius: 12px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(50, 50, 93, 0.05), 0 1px 2px rgba(0, 0, 0, 0.08);">' +
+        '<div style="font-size: 9pt; color: #697386; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem;">' +
+        m.label +
+        '</div>' +
+        '<div style="font-size: 18pt; font-weight: 700; color: #1A1F36; margin-bottom: 0.5rem;">' +
+        m.value +
+        '</div>';
 
-    // Calcola variazioni
-    const calcVariazione = (v2024, v2023) => {
-      if (!v2024 || !v2023 || v2023 === 0) return '-';
-      const delta = ((v2024 - v2023) / Math.abs(v2023)) * 100;
-      return `${delta > 0 ? '+' : ''}${delta.toFixed(1)}%`;
-    };
-
-    const tableData = [
-      // Header
-      [
-        { text: 'Voce', style: 'tableHeader' },
-        { text: '2023 (€)', style: 'tableHeader', alignment: 'right' },
-        { text: '2024 (€)', style: 'tableHeader', alignment: 'right' },
-        { text: 'Δ%', style: 'tableHeader', alignment: 'right' }
-      ],
-      // Ricavi
-      ['Ricavi delle vendite', ricavi['2023']?.toLocaleString('it-IT') || '-', ricavi['2024']?.toLocaleString('it-IT') || '-', calcVariazione(ricavi['2024'], ricavi['2023'])],
-      // Costi
-      ['Costi materie prime', costi.materiePrime?.['2023']?.toLocaleString('it-IT') || '-', costi.materiePrime?.['2024']?.toLocaleString('it-IT') || '-', calcVariazione(costi.materiePrime?.['2024'], costi.materiePrime?.['2023'])],
-      ['Costi per servizi', costi.servizi?.['2023']?.toLocaleString('it-IT') || '-', costi.servizi?.['2024']?.toLocaleString('it-IT') || '-', calcVariazione(costi.servizi?.['2024'], costi.servizi?.['2023'])],
-      ['Costi del personale', costi.personale?.['2023']?.toLocaleString('it-IT') || '-', costi.personale?.['2024']?.toLocaleString('it-IT') || '-', calcVariazione(costi.personale?.['2024'], costi.personale?.['2023'])],
-      ['Ammortamenti', costi.ammortamenti?.['2023']?.toLocaleString('it-IT') || '-', costi.ammortamenti?.['2024']?.toLocaleString('it-IT') || '-', calcVariazione(costi.ammortamenti?.['2024'], costi.ammortamenti?.['2023'])],
-      // Risultati
-      [{ text: 'EBITDA', bold: true }, { text: risultati.ebitda?.['2023']?.toLocaleString('it-IT') || '-', bold: true }, { text: risultati.ebitda?.['2024']?.toLocaleString('it-IT') || '-', bold: true, color: risultati.ebitda?.['2024'] < 0 ? '#ef4444' : '#10b981' }, { text: calcVariazione(risultati.ebitda?.['2024'], risultati.ebitda?.['2023']), bold: true }],
-      [{ text: 'Utile Netto', bold: true }, { text: risultati.utileNetto?.['2023']?.toLocaleString('it-IT') || '-', bold: true }, { text: risultati.utileNetto?.['2024']?.toLocaleString('it-IT') || '-', bold: true, color: risultati.utileNetto?.['2024'] < 0 ? '#ef4444' : '#10b981' }, { text: calcVariazione(risultati.utileNetto?.['2024'], risultati.utileNetto?.['2023']), bold: true }]
-    ];
-
-    return [
-      { text: 'Conto Economico', style: 'h3', margin: [0, 20, 0, 12] },
-      {
-        table: {
-          headerRows: 1,
-          widths: ['*', 'auto', 'auto', 'auto'],
-          body: tableData
-        },
-        layout: {
-          fillColor: (rowIndex) => (rowIndex === 0 ? '#3b82f6' : rowIndex % 2 === 0 ? '#f8fafc' : null),
-          hLineWidth: () => 0.5,
-          vLineWidth: () => 0.5,
-          hLineColor: () => '#e2e8f0',
-          vLineColor: () => '#e2e8f0'
-        },
-        margin: [0, 0, 0, 20]
-      }
-    ];
-  }
-
-  /**
-   * Genera tabella Stato Patrimoniale
-   */
-  generateStatoPatrimonialeTable() {
-    const sp = this.data.noteTecniche?.find(n => n.title === 'Stato Patrimoniale');
-    if (!sp || !sp.statoPatrimoniale) {
-      return [{ text: 'Dati Stato Patrimoniale non disponibili', fontSize: 10, color: '#64748b', margin: [0, 10, 0, 10] }];
-    }
-
-    const attivo = sp.statoPatrimoniale.attivo || {};
-    const passivo = sp.statoPatrimoniale.passivo || {};
-
-    const tableData = [
-      // Header
-      [
-        { text: 'ATTIVO', style: 'tableHeader', colSpan: 2 },
-        {},
-        { text: 'PASSIVO', style: 'tableHeader', colSpan: 2 },
-        {}
-      ],
-      [
-        { text: 'Voce', style: 'tableHeader' },
-        { text: '2024 (€)', style: 'tableHeader', alignment: 'right' },
-        { text: 'Voce', style: 'tableHeader' },
-        { text: '2024 (€)', style: 'tableHeader', alignment: 'right' }
-      ],
-      // Immobilizzazioni vs Patrimonio Netto
-      ['Immobilizzazioni', attivo.immobilizzazioni?.['2024']?.toLocaleString('it-IT') || '-', 'Patrimonio Netto', passivo.patrimonioNetto?.['2024']?.toLocaleString('it-IT') || '-'],
-      // Attivo Circolante vs Debiti
-      ['Attivo Circolante', attivo.circolante?.reduce((sum, c) => sum + (c['2024'] || 0), 0).toLocaleString('it-IT') || '-', 'Debiti', passivo.totaleDebiti?.['2024']?.toLocaleString('it-IT') || '-'],
-      // Dettagli Circolante
-      ['  - Crediti', attivo.circolante?.find(c => c.voce === 'Crediti')?.['2024']?.toLocaleString('it-IT') || '-', '  - Debiti vs Fornitori', passivo.debiti?.find(d => d.voce === 'Debiti verso fornitori')?.['2024']?.toLocaleString('it-IT') || '-'],
-      ['  - Rimanenze', attivo.circolante?.find(c => c.voce === 'Rimanenze')?.['2024']?.toLocaleString('it-IT') || '-', '  - Debiti Tributari', passivo.debiti?.find(d => d.voce === 'Debiti tributari')?.['2024']?.toLocaleString('it-IT') || '-'],
-      ['  - Disponibilità Liquide', attivo.circolante?.find(c => c.voce === 'Disponibilità liquide')?.['2024']?.toLocaleString('it-IT') || '-', '  - Debiti Bancari', passivo.debiti?.find(d => d.voce === 'Debiti verso banche')?.['2024']?.toLocaleString('it-IT') || '-'],
-      // Totali
-      [{ text: 'TOTALE ATTIVO', bold: true }, { text: attivo.totaleAttivo?.['2024']?.toLocaleString('it-IT') || '-', bold: true }, { text: 'TOTALE PASSIVO', bold: true }, { text: passivo.totalePassivo?.['2024']?.toLocaleString('it-IT') || '-', bold: true }]
-    ];
-
-    return [
-      { text: 'Stato Patrimoniale', style: 'h3', margin: [0, 20, 0, 12] },
-      {
-        table: {
-          headerRows: 2,
-          widths: ['*', 'auto', '*', 'auto'],
-          body: tableData
-        },
-        layout: {
-          fillColor: (rowIndex) => (rowIndex < 2 ? '#3b82f6' : rowIndex % 2 === 0 ? '#f8fafc' : null),
-          hLineWidth: () => 0.5,
-          vLineWidth: () => 0.5,
-          hLineColor: () => '#e2e8f0',
-          vLineColor: () => '#e2e8f0'
-        },
-        margin: [0, 0, 0, 20]
-      }
-    ];
-  }
-
-  /**
-   * Genera box Rating visivo
-   */
-  generateRiskBox() {
-    return [
-      {
-        text: 'Sintesi Risk Assessment',
-        style: 'h3',
-        margin: [0, 20, 0, 12]
-      },
-      {
-        table: {
-          widths: ['*', '*', '*'],
-          body: [
-            [
-              {
-                stack: [
-                  { text: 'RATING', fontSize: 10, color: '#64748b', margin: [0, 0, 0, 8], alignment: 'center' },
-                  { text: this.data.riskAssessment.rating, fontSize: 28, bold: true, color: this.getRatingColor(), alignment: 'center', margin: [0, 0, 0, 5] },
-                  { text: this.data.riskAssessment.categoryLabel, fontSize: 11, color: '#64748b', alignment: 'center' }
-                ],
-                border: [true, true, false, true],
-                margin: [15, 15, 15, 15],
-                fillColor: '#f8fafc'
-              },
-              {
-                stack: [
-                  { text: 'SCORE', fontSize: 10, color: '#64748b', margin: [0, 0, 0, 8], alignment: 'center' },
-                  { text: `${this.data.riskAssessment.score.toFixed(1)}/100`, fontSize: 28, bold: true, color: '#1e293b', alignment: 'center', margin: [0, 0, 0, 5] },
-                  { text: 'Indice Rischio Ponderato', fontSize: 11, color: '#64748b', alignment: 'center' }
-                ],
-                border: [false, true, false, true],
-                margin: [15, 15, 15, 15],
-                fillColor: '#f8fafc'
-              },
-              {
-                stack: [
-                  { text: 'TREND', fontSize: 10, color: '#64748b', margin: [0, 0, 0, 8], alignment: 'center' },
-                  { text: this.data.riskAssessment.previousRating === this.data.riskAssessment.rating ? '→' : '↓', fontSize: 28, bold: true, color: '#94a3b8', alignment: 'center', margin: [0, 0, 0, 5] },
-                  { text: `vs ${this.data.riskAssessment.previousRating}`, fontSize: 11, color: '#64748b', alignment: 'center' }
-                ],
-                border: [false, true, true, true],
-                margin: [15, 15, 15, 15],
-                fillColor: '#f8fafc'
-              }
-            ]
-          ]
-        },
-        layout: {
-          hLineWidth: () => 1,
-          vLineWidth: () => 1,
-          hLineColor: () => '#e2e8f0',
-          vLineColor: () => '#e2e8f0'
-        },
-        margin: [0, 0, 0, 20]
-      }
-    ];
-  }
-
-  /**
-   * Genera box Codice della Crisi con indicatori colorati
-   */
-  generateCodiceCrisiBox() {
-    const indices = this.data.codiceCrisi.indices || [];
-
-    const indiciRows = indices.map(idx => [
-      {
-        text: `${idx.status === 'OK' ? '✓' : '⚠'}  ${idx.name}`,
-        fontSize: 11,
-        color: idx.status === 'OK' ? '#10b981' : '#f59e0b',
-        bold: idx.status !== 'OK'
-      },
-      { text: idx.value, fontSize: 11, alignment: 'right' },
-      { text: idx.soglia, fontSize: 11, alignment: 'right', color: '#64748b' },
-      { text: idx.status, fontSize: 11, alignment: 'center', color: idx.status === 'OK' ? '#10b981' : '#f59e0b', bold: true }
-    ]);
-
-    return [
-      { text: 'Monitoraggio Indici', style: 'h3', margin: [0, 20, 0, 12] },
-      {
-        table: {
-          widths: ['*', 'auto', 'auto', 'auto'],
-          body: [
-            [
-              { text: 'Indicatore', style: 'tableHeader' },
-              { text: 'Valore', style: 'tableHeader', alignment: 'right' },
-              { text: 'Soglia', style: 'tableHeader', alignment: 'right' },
-              { text: 'Status', style: 'tableHeader', alignment: 'center' }
-            ],
-            ...indiciRows
-          ]
-        },
-        layout: {
-          fillColor: (rowIndex) => (rowIndex === 0 ? '#3b82f6' : rowIndex % 2 === 0 ? '#f8fafc' : null),
-          hLineWidth: () => 0.5,
-          vLineWidth: () => 0.5,
-          hLineColor: () => '#e2e8f0',
-          vLineColor: () => '#e2e8f0'
-        },
-        margin: [0, 0, 0, 15]
-      },
-      {
-        columns: [
-          {
-            width: '*',
-            text: [
-              { text: 'Status Generale: ', fontSize: 11, color: '#64748b' },
-              { text: this.data.codiceCrisi.status.overall, fontSize: 11, bold: true, color: this.data.codiceCrisi.status.overall === 'IN BONIS' ? '#10b981' : '#f59e0b' }
-            ]
-          },
-          {
-            width: '*',
-            text: `${this.data.codiceCrisi.status.indiciOk} OK / ${this.data.codiceCrisi.status.indiciAllerta} in Allerta`,
-            fontSize: 11,
-            alignment: 'right',
-            color: '#64748b'
-          }
-        ],
-        margin: [0, 0, 0, 20]
-      }
-    ];
-  }
-
-  generateTableOfContents() {
-    return [
-      { text: 'INDICE', style: 'h1' },
-      { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 1, lineColor: '#e2e8f0' }], margin: [0, 0, 0, 20] },
-      { text: '1. Executive Summary', fontSize: 12, margin: [0, 8, 0, 8] },
-      { text: '2. Profilo Aziendale', fontSize: 12, margin: [0, 8, 0, 8] },
-      { text: '3. Analisi Economica', fontSize: 12, margin: [0, 8, 0, 8] },
-      { text: '4. Stato Patrimoniale', fontSize: 12, margin: [0, 8, 0, 8] },
-      { text: '5. Indicatori Finanziari', fontSize: 12, margin: [0, 8, 0, 8] },
-      { text: '6. Risk Assessment', fontSize: 12, margin: [0, 8, 0, 8] },
-      { text: '7. Codice della Crisi d\'Impresa', fontSize: 12, margin: [0, 8, 0, 8] },
-      { text: '8. Raccomandazioni', fontSize: 12, margin: [0, 8, 0, 8] }
-    ];
-  }
-
-  generateExecutiveSummary() {
-    return [
-      { text: '1. EXECUTIVE SUMMARY', style: 'h1' },
-      { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 1, lineColor: '#e2e8f0' }], margin: [0, 0, 0, 20] },
-
-      // Risk Score Box
-      {
-        table: {
-          widths: ['*'],
-          body: [[{
-            stack: [
-              { text: 'INDICE DI RISCHIO', fontSize: 12, bold: true, color: 'white' },
-              { text: this.data.riskAssessment.score.toFixed(2), fontSize: 32, bold: true, color: 'white', margin: [0, 10, 0, 0] },
-              { text: `${this.data.riskAssessment.rating} - ${this.data.riskAssessment.categoryLabel}`, fontSize: 11, color: 'white', margin: [0, 5, 0, 10] }
-            ],
-            fillColor: this.getRatingColor(),
-            margin: [20, 15, 20, 15],
-            alignment: 'center'
-          }]]
-        },
-        layout: 'noBorders',
-        margin: [0, 0, 0, 20]
-      },
-
-      { text: this.data.riskAssessment.description, margin: [0, 0, 0, 20] },
-
-      { text: 'Punti di Forza', style: 'h2' },
-      {
-        ul: this.data.executiveSummary.strengths.map(s => ({ text: s, margin: [0, 3, 0, 3] })),
-        margin: [0, 0, 0, 20]
-      },
-
-      { text: 'Aree di Attenzione', style: 'h2' },
-      {
-        ul: this.data.executiveSummary.weaknesses.map(w => ({ text: w, margin: [0, 3, 0, 3] })),
-        margin: [0, 0, 0, 0]
-      }
-    ];
-  }
-
-  generateCompanyProfile() {
-    return [
-      { text: '2. PROFILO AZIENDALE', style: 'h1' },
-      { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 1, lineColor: '#e2e8f0' }], margin: [0, 0, 0, 20] },
-
-      { text: 'Dati Anagrafici', style: 'h2' },
-      {
-        table: {
-          widths: ['40%', '60%'],
-          body: [
-            ['Ragione Sociale', this.data.company.fullName],
-            ['Forma Giuridica', this.data.company.legalForm],
-            ['Data Costituzione', this.data.company.foundedDate],
-            ['Codice ATECO', this.data.company.ateco],
-            ['P.IVA', this.data.company.piva],
-            ['Indirizzo', `${this.data.company.address.street}, ${this.data.company.address.zip} ${this.data.company.address.city} (${this.data.company.address.province})`]
-          ]
-        },
-        margin: [0, 0, 0, 20]
-      },
-
-      { text: 'Struttura Organizzativa', style: 'h2' },
-      {
-        table: {
-          widths: ['40%', '60%'],
-          body: [
-            ['Capitale Sociale', this.formatCurrency(this.data.company.capitaleSociale)],
-            ['Dipendenti', `${this.data.company.employees.current} (${this.data.company.employees.trend >= 0 ? '+' : ''}${this.data.company.employees.trend} vs anno precedente)`],
-            ['Sedi Operative', this.data.company.locations.toString()],
-            ['Email / PEC', `${this.data.company.contacts.email} / ${this.data.company.contacts.pec}`],
-            ['Sito Web', this.data.company.contacts.website || 'N/D']
-          ]
-        },
-        margin: [0, 0, 0, 20]
-      },
-
-      { text: 'Organi Sociali', style: 'h2' },
-      {
-        table: {
-          widths: ['30%', '40%', '30%'],
-          headerRows: 1,
-          body: [
-            [{ text: 'Nome', style: 'tableHeader' }, { text: 'Ruolo', style: 'tableHeader' }, { text: 'Data Nomina', style: 'tableHeader' }],
-            ...this.data.management.map(m => [m.name, m.role, m.appointmentDate])
-          ]
-        }
-      }
-    ];
-  }
-
-  generateEconomicAnalysis(chartImages) {
-    const revenues = this.data.keyMetrics.find(m => m.id === 'revenues');
-    const ebitda = this.data.financialData.stats.find(s => s.id === 'ebitda');
-    const netIncome = this.data.financialData.stats.find(s => s.id === 'utile');
-
-    return [
-      { text: '3. ANALISI ECONOMICA', style: 'h1' },
-      { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 1, lineColor: '#e2e8f0' }], margin: [0, 0, 0, 20] },
-
-      { text: 'Principali Indicatori Economici 2024', style: 'h2' },
-      {
-        table: {
-          widths: ['40%', '30%', '30%'],
-          headerRows: 1,
-          body: [
-            [
-              { text: 'Indicatore', style: 'tableHeader' },
-              { text: 'Valore', style: 'tableHeader' },
-              { text: 'Trend vs 2023', style: 'tableHeader' }
-            ],
-            [
-              'Ricavi delle Vendite',
-              revenues?.value || 'N/D',
-              { text: `+${revenues?.trend?.value || 0}%`, style: 'positive' }
-            ],
-            [
-              'EBITDA',
-              ebitda?.value || 'N/D',
-              { text: ebitda?.trend?.value || 'N/D', style: 'positive' }
-            ],
-            [
-              'Utile Netto',
-              netIncome?.value || 'N/D',
-              { text: netIncome?.trend?.value || 'N/D', style: 'positive' }
-            ]
-          ]
-        },
-        margin: [0, 0, 0, 20]
-      },
-
-      { text: 'Trend Economico (2022-2024)', style: 'h2' },
-      chartImages.economicTrend ?
-        { image: chartImages.economicTrend, width: 500, margin: [0, 10, 0, 20] } :
-        { text: 'Grafico non disponibile', italics: true, color: '#64748b', margin: [0, 10, 0, 20] }
-    ];
-  }
-
-  generateBalanceSheet() {
-    const sp = this.data.noteTecniche[1]?.statoPatrimoniale;
-    if (!sp) return [{ text: 'Dati di bilancio non disponibili', italics: true }];
-
-    return [
-      { text: '4. STATO PATRIMONIALE', style: 'h1' },
-      { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 1, lineColor: '#e2e8f0' }], margin: [0, 0, 0, 20] },
-
-      { text: 'Attivo', style: 'h2' },
-      {
-        table: {
-          widths: ['60%', '40%'],
-          headerRows: 1,
-          body: [
-            [{ text: 'Voce', style: 'tableHeader' }, { text: 'Valore 2024', style: 'tableHeader' }],
-            ...sp.attivo.immobilizzazioni.map(item => [item.voce, item['2024']]),
-            [{ text: 'Totale Immobilizzazioni', bold: true }, { text: sp.attivo.totaleImmobilizzazioni['2024'], bold: true }],
-            ...sp.attivo.circolante.map(item => [item.voce, item['2024']]),
-            [{ text: 'Totale Attivo Circolante', bold: true }, { text: sp.attivo.totaleCircolante['2024'], bold: true }],
-            [{ text: 'TOTALE ATTIVO', bold: true, fillColor: '#f1f5f9' }, { text: sp.attivo.totaleAttivo['2024'], bold: true, fillColor: '#f1f5f9' }]
-          ]
-        },
-        margin: [0, 0, 0, 20]
-      },
-
-      { text: 'Passivo', style: 'h2' },
-      {
-        table: {
-          widths: ['60%', '40%'],
-          headerRows: 1,
-          body: [
-            [{ text: 'Voce', style: 'tableHeader' }, { text: 'Valore 2024', style: 'tableHeader' }],
-            ...sp.passivo.patrimonioNetto.map(item => [item.voce, item['2024'] || 'N/D']),
-            [{ text: 'Totale Patrimonio Netto', bold: true }, { text: sp.passivo.totalePatrimonioNetto['2024'], bold: true }],
-            ...sp.passivo.debiti.map(item => [item.voce, item['2024']]),
-            [{ text: 'Totale Debiti', bold: true }, { text: sp.passivo.totaleDebiti['2024'], bold: true }],
-            [{ text: 'TOTALE PASSIVO', bold: true, fillColor: '#f1f5f9' }, { text: sp.passivo.totalePassivo['2024'], bold: true, fillColor: '#f1f5f9' }]
-          ]
-        }
-      }
-    ];
-  }
-
-  generateFinancialIndicators() {
-    return [
-      { text: '5. INDICATORI FINANZIARI', style: 'h1' },
-      { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 1, lineColor: '#e2e8f0' }], margin: [0, 0, 0, 20] },
-
-      {
-        table: {
-          widths: ['40%', '30%', '30%'],
-          headerRows: 1,
-          body: [
-            [
-              { text: 'Indicatore', style: 'tableHeader' },
-              { text: 'Valore', style: 'tableHeader' },
-              { text: 'Valutazione', style: 'tableHeader' }
-            ],
-            ...this.data.financialData.stats.filter(s => ['roe', 'roi', 'ros', 'leverage', 'liquidita'].includes(s.id)).map(stat => [
-              stat.label,
-              stat.value,
-              { text: stat.trend.value, style: this.getIndicatorStyle(stat.colorClass) }
-            ])
-          ]
-        }
-      }
-    ];
-  }
-
-  generateRiskAssessment(chartImages) {
-    return [
-      { text: '6. RISK ASSESSMENT', style: 'h1' },
-      { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 1, lineColor: '#e2e8f0' }], margin: [0, 0, 0, 20] },
-
-      { text: 'Profili di Rischio (scala 1-5)', style: 'h2' },
-      {
-        table: {
-          widths: ['50%', '20%', '30%'],
-          headerRows: 1,
-          body: [
-            [
-              { text: 'Profilo', style: 'tableHeader' },
-              { text: 'Score', style: 'tableHeader' },
-              { text: 'Valutazione', style: 'tableHeader' }
-            ],
-            ...this.data.profiles.map(p => [
-              p.name,
-              `${p.score}/5`,
-              { text: p.evaluation, color: this.getProfileColor(p.color) }
-            ])
-          ]
-        },
-        margin: [0, 0, 0, 20]
-      },
-
-      { text: 'Benchmark Settoriale', style: 'h2' },
-      chartImages.benchmarkRadar ?
-        { image: chartImages.benchmarkRadar, width: 400, alignment: 'center', margin: [0, 10, 0, 0] } :
-        { text: 'Grafico non disponibile', italics: true, color: '#64748b', margin: [0, 10, 0, 20] }
-    ];
-  }
-
-  generateCrisisCode() {
-    return [
-      { text: '7. CODICE DELLA CRISI D\'IMPRESA', style: 'h1' },
-      { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 1, lineColor: '#e2e8f0' }], margin: [0, 0, 0, 20] },
-
-      {
-        text: [
-          'Status: ',
-          { text: this.data.codiceCrisi.status.overall, bold: true, color: this.data.codiceCrisi.status.overall === 'ALLERTA' ? '#f5365c' : '#24b47e' },
-          ` (${this.data.codiceCrisi.status.indiciOk} OK, ${this.data.codiceCrisi.status.indiciAllerta} in allerta su ${this.data.codiceCrisi.status.totale})`
-        ],
-        margin: [0, 0, 0, 20],
-        fontSize: 12
-      },
-
-      {
-        table: {
-          widths: ['5%', '30%', '25%', '20%', '20%'],
-          headerRows: 1,
-          body: [
-            [
-              { text: '#', style: 'tableHeader' },
-              { text: 'Indice', style: 'tableHeader' },
-              { text: 'Valore', style: 'tableHeader' },
-              { text: 'Soglia', style: 'tableHeader' },
-              { text: 'Status', style: 'tableHeader' }
-            ],
-            ...this.data.codiceCrisi.indices.map(idx => [
-              idx.number.toString(),
-              { text: idx.name, fontSize: 9 },
-              idx.value,
-              { text: idx.soglia, fontSize: 9 },
-              {
-                text: idx.status,
-                bold: true,
-                color: idx.status === 'OK' ? '#24b47e' : idx.status === 'ALLERTA' ? '#f5365c' : '#f9b115'
-              }
-            ])
-          ]
-        }
-      }
-    ];
-  }
-
-  generateRecommendations() {
-    return [
-      { text: '8. RACCOMANDAZIONI', style: 'h1' },
-      { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 1, lineColor: '#e2e8f0' }], margin: [0, 0, 0, 20] },
-
-      {
-        ul: this.data.outlook.raccomandazioni.map(r => ({ text: r, margin: [0, 5, 0, 5] })),
-        margin: [0, 0, 0, 20]
-      },
-
-      { text: 'Outlook', style: 'h2' },
-      { text: this.data.outlook.outlook, alignment: 'justify' }
-    ];
-  }
-
-  // ============================================
-  // UTILITY FUNCTIONS
-  // ============================================
-
-  async generateChartImages() {
-    // Placeholder - i grafici verranno generati dai Chart.js esistenti
-    // Per ora ritorniamo oggetto vuoto, implementeremo dopo
-    return {
-      economicTrend: null,
-      benchmarkRadar: null
-    };
-  }
-
-  parseMarkdownToPDFContent(markdown, chartImages = null) {
-    // Parser markdown avanzato -> pdfmake content con formattazione corretta + grafici
-    const lines = markdown.split('\n');
-    const content = [];
-    let inList = false;
-    let listItems = [];
-    let inTable = false;
-    let tableLines = [];
-    let lastH2Title = null; // Traccia ultimo H2 per inserire grafici
-
-    const parseInlineFormatting = (text) => {
-      // Converti markdown inline in array di text objects pdfmake
-      const parts = [];
-      let currentPos = 0;
-
-      // Pattern per bold, italic, e testo normale
-      const pattern = /(\*\*(.+?)\*\*)|(\*(.+?)\*)|([^*]+)/g;
-      let match;
-
-      while ((match = pattern.exec(text)) !== null) {
-        if (match[2]) {
-          // Bold **text**
-          parts.push({ text: match[2], bold: true });
-        } else if (match[4]) {
-          // Italic *text*
-          parts.push({ text: match[4], italics: true });
-        } else if (match[5]) {
-          // Normal text
-          parts.push({ text: match[5] });
-        }
+      if (m.trend !== undefined) {
+        html += '<div style="font-size: 10pt; font-weight: 600; color: ' + trendColor + ';">' +
+          trendSymbol + ' ' + Math.abs(m.trend).toFixed(1) + '%' +
+          '</div>';
       }
 
-      return parts.length > 0 ? parts : [{ text: text }];
-    };
-
-    const flushList = () => {
-      if (listItems.length > 0) {
-        content.push({
-          ul: listItems,
-          margin: [0, 5, 0, 10]
-        });
-        listItems = [];
-        inList = false;
-      }
-    };
-
-    const flushTable = () => {
-      if (tableLines.length > 0) {
-        // Parse markdown table
-        const rows = tableLines.filter(line => !line.match(/^\|[\s-:|]+\|$/)); // Rimuovi separator row
-
-        if (rows.length > 0) {
-          const tableBody = rows.map((row, index) => {
-            const cells = row
-              .split('|')
-              .slice(1, -1) // Rimuovi | iniziale e finale
-              .map(cell => cell.trim());
-
-            return cells.map(cell => ({
-              text: parseInlineFormatting(cell),
-              style: index === 0 ? 'tableHeader' : 'normal',
-              margin: [5, 5, 5, 5]
-            }));
-          });
-
-          content.push({
-            table: {
-              headerRows: 1,
-              widths: Array(tableBody[0]?.length || 1).fill('*'),
-              body: tableBody
-            },
-            layout: {
-              fillColor: (rowIndex) => (rowIndex === 0 ? '#3b82f6' : (rowIndex % 2 === 0 ? '#f8fafc' : null)),
-              hLineWidth: () => 0.5,
-              vLineWidth: () => 0.5,
-              hLineColor: () => '#e2e8f0',
-              vLineColor: () => '#e2e8f0'
-            },
-            margin: [0, 10, 0, 15]
-          });
-        }
-
-        tableLines = [];
-        inTable = false;
-      }
-    };
-
-    const insertChartIfNeeded = (sectionTitle) => {
-      if (!chartImages) return;
-
-      // Mapping sezioni -> grafici
-      const chartMapping = {
-        'analisi economica': 'economicTrend',
-        'economic': 'economicTrend',
-        'indicatori finanziari': ['debtSustainability', 'workingCapital'],
-        'financial indicators': ['debtSustainability', 'workingCapital'],
-        'stato patrimoniale': 'workingCapital',
-        'balance sheet': 'workingCapital',
-        'risk assessment': 'benchmarkRadar',
-        'valutazione rischio': 'benchmarkRadar',
-        'profili': 'benchmarkRadar',
-        'stress': 'stressTest',
-        'scenario': 'stressTest'
-      };
-
-      const titleLower = sectionTitle.toLowerCase();
-
-      for (const [key, chartKey] of Object.entries(chartMapping)) {
-        if (titleLower.includes(key)) {
-          // Se è un array, inserisci tutti i grafici
-          if (Array.isArray(chartKey)) {
-            chartKey.forEach(ck => {
-              if (chartImages[ck]) {
-                content.push({
-                  image: chartImages[ck],
-                  width: 480,
-                  alignment: 'center',
-                  margin: [0, 15, 0, 20]
-                });
-              }
-            });
-          } else {
-            // Singolo grafico
-            if (chartImages[chartKey]) {
-              content.push({
-                image: chartImages[chartKey],
-                width: chartKey === 'benchmarkRadar' ? 350 : 480,
-                alignment: 'center',
-                margin: [0, 15, 0, 20]
-              });
-            }
-          }
-          break;
-        }
-      }
-    };
-
-    lines.forEach((line, index) => {
-      const trimmed = line.trim();
-
-      // Rileva tabelle markdown (righe che iniziano con |)
-      if (trimmed.startsWith('|')) {
-        flushList();
-        inTable = true;
-        tableLines.push(trimmed);
-        return;
-      }
-
-      // Se eravamo in una tabella e la riga non è una tabella, flush
-      if (inTable && !trimmed.startsWith('|')) {
-        flushTable();
-      }
-
-      // Linea vuota
-      if (!trimmed) {
-        flushList();
-        flushTable();
-        if (content.length > 0) {
-          content.push({ text: '', margin: [0, 5, 0, 5] });
-        }
-        return;
-      }
-
-      // Headers H1
-      if (trimmed.startsWith('# ') && !trimmed.startsWith('##')) {
-        flushList();
-        flushTable();
-        const headerText = trimmed.replace(/^#\s*/, '');
-        content.push({
-          text: parseInlineFormatting(headerText),
-          style: 'h1'
-        });
-        return;
-      }
-
-      // Headers H2
-      if (trimmed.startsWith('## ') && !trimmed.startsWith('###')) {
-        flushList();
-        flushTable();
-
-        // Se c'era un H2 precedente, inserisci grafico se appropriato
-        if (lastH2Title) {
-          insertChartIfNeeded(lastH2Title);
-        }
-
-        const headerText = trimmed.replace(/^##\s*/, '');
-        lastH2Title = headerText; // Traccia per prossimo inserimento
-
-        content.push({
-          text: parseInlineFormatting(headerText),
-          style: 'h2'
-        });
-        return;
-      }
-
-      // Headers H3
-      if (trimmed.startsWith('### ') && !trimmed.startsWith('####')) {
-        flushList();
-        flushTable();
-        const headerText = trimmed.replace(/^###\s*/, '');
-        content.push({
-          text: parseInlineFormatting(headerText),
-          style: 'h3'
-        });
-        return;
-      }
-
-      // Headers H4
-      if (trimmed.startsWith('#### ')) {
-        flushList();
-        flushTable();
-        const headerText = trimmed.replace(/^####\s*/, '');
-        content.push({
-          text: parseInlineFormatting(headerText),
-          fontSize: 11,
-          bold: true,
-          margin: [0, 8, 0, 4]
-        });
-        return;
-      }
-
-      // Liste non ordinate (- o *)
-      if (trimmed.match(/^[-*]\s+/)) {
-        inList = true;
-        const itemText = trimmed.replace(/^[-*]\s+/, '');
-        listItems.push(parseInlineFormatting(itemText));
-        return;
-      }
-
-      // Liste numerate (1. 2. ecc)
-      if (trimmed.match(/^\d+\.\s+/)) {
-        flushList();
-        const itemText = trimmed.replace(/^\d+\.\s+/, '');
-        // Per ora tratta come lista non ordinata (TODO: implementare ol)
-        if (!inList) {
-          inList = true;
-        }
-        listItems.push(parseInlineFormatting(itemText));
-        return;
-      }
-
-      // Separatore orizzontale
-      if (trimmed.match(/^---+$/) || trimmed.match(/^\*\*\*+$/)) {
-        flushList();
-        content.push({
-          canvas: [{
-            type: 'line',
-            x1: 0,
-            y1: 0,
-            x2: 515,
-            y2: 0,
-            lineWidth: 1,
-            lineColor: '#e2e8f0'
-          }],
-          margin: [0, 10, 0, 10]
-        });
-        return;
-      }
-
-      // Paragrafo normale
-      flushList();
-      flushTable();
-      content.push({
-        text: parseInlineFormatting(trimmed),
-        margin: [0, 3, 0, 3],
-        alignment: 'justify'
-      });
+      html += '</div>';
     });
 
-    // Flush finale se presente
-    flushList();
-    flushTable();
+    html += '</div>';
+    return html;
+  }
 
-    // Inserisci grafico dell'ultima sezione se presente
-    if (lastH2Title) {
-      insertChartIfNeeded(lastH2Title);
+  // Generate summary cards (strengths/weaknesses)
+  generateSummaryCards() {
+    if (!this.data.executiveSummary) return '';
+
+    const strengths = this.data.executiveSummary.strengths || [];
+    const weaknesses = this.data.executiveSummary.weaknesses || [];
+
+    let html = '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 2rem 0; page-break-inside: avoid;">';
+
+    // Strengths card
+    html += '<div style="background: linear-gradient(135deg, rgba(0, 217, 36, 0.05) 0%, rgba(0, 217, 36, 0.02) 100%); border: 1px solid rgba(0, 217, 36, 0.2); border-radius: 12px; padding: 1.5rem;">' +
+      '<h3 style="font-size: 12pt; font-weight: 700; color: #00D924; margin: 0 0 1rem 0; display: flex; align-items: center;">' +
+      '<span style="margin-right: 0.5rem;">✓</span> Punti di Forza' +
+      '</h3>' +
+      '<ul style="margin: 0; padding-left: 1.5rem; list-style: disc; color: #1A1F36;">';
+
+    strengths.forEach(s => {
+      html += '<li style="margin-bottom: 0.5rem;">' + s + '</li>';
+    });
+
+    html += '</ul></div>';
+
+    // Weaknesses card
+    html += '<div style="background: linear-gradient(135deg, rgba(255, 176, 32, 0.05) 0%, rgba(255, 176, 32, 0.02) 100%); border: 1px solid rgba(255, 176, 32, 0.2); border-radius: 12px; padding: 1.5rem;">' +
+      '<h3 style="font-size: 12pt; font-weight: 700; color: #FFB020; margin: 0 0 1rem 0; display: flex; align-items: center;">' +
+      '<span style="margin-right: 0.5rem;">⚠</span> Aree di Attenzione' +
+      '</h3>' +
+      '<ul style="margin: 0; padding-left: 1.5rem; list-style: disc; color: #1A1F36;">';
+
+    weaknesses.forEach(w => {
+      html += '<li style="margin-bottom: 0.5rem;">' + w + '</li>';
+    });
+
+    html += '</ul></div>';
+
+    html += '</div>';
+    return html;
+  }
+
+  // Generate Conto Economico table
+  generateContoEconomicoTable() {
+    const ce = this.data.noteTecniche && this.data.noteTecniche.find(n => n.contoEconomico);
+    if (!ce || !ce.contoEconomico) return '';
+
+    const contoEconomico = ce.contoEconomico;
+    const formatEuro = (val) => {
+      if (val === null || val === undefined) return '-';
+      return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 }).format(val);
+    };
+
+    const calcVariation = (val2024, val2023) => {
+      if (!val2023 || val2023 === 0) return '-';
+      const variation = ((val2024 - val2023) / Math.abs(val2023)) * 100;
+      return variation.toFixed(1) + '%';
+    };
+
+    const getVariationColor = (val2024, val2023) => {
+      if (!val2023) return '#697386';
+      return val2024 > val2023 ? '#00D924' : '#DF1B41';
+    };
+
+    const rows = [
+      { label: 'Ricavi', val2023: contoEconomico.ricavi ? contoEconomico.ricavi['2023'] : null, val2024: contoEconomico.ricavi ? contoEconomico.ricavi['2024'] : null },
+      { label: 'Costi Operativi', val2023: contoEconomico.costi && contoEconomico.costi.operativi ? contoEconomico.costi.operativi['2023'] : null, val2024: contoEconomico.costi && contoEconomico.costi.operativi ? contoEconomico.costi.operativi['2024'] : null },
+      { label: 'EBITDA', val2023: contoEconomico.risultati && contoEconomico.risultati.ebitda ? contoEconomico.risultati.ebitda['2023'] : null, val2024: contoEconomico.risultati && contoEconomico.risultati.ebitda ? contoEconomico.risultati.ebitda['2024'] : null, highlight: true },
+      { label: 'Ammortamenti', val2023: contoEconomico.costi && contoEconomico.costi.ammortamenti ? contoEconomico.costi.ammortamenti['2023'] : null, val2024: contoEconomico.costi && contoEconomico.costi.ammortamenti ? contoEconomico.costi.ammortamenti['2024'] : null },
+      { label: 'EBIT', val2023: contoEconomico.risultati && contoEconomico.risultati.ebit ? contoEconomico.risultati.ebit['2023'] : null, val2024: contoEconomico.risultati && contoEconomico.risultati.ebit ? contoEconomico.risultati.ebit['2024'] : null },
+      { label: 'Oneri Finanziari', val2023: contoEconomico.costi && contoEconomico.costi.finanziari ? contoEconomico.costi.finanziari['2023'] : null, val2024: contoEconomico.costi && contoEconomico.costi.finanziari ? contoEconomico.costi.finanziari['2024'] : null },
+      { label: 'Utile Netto', val2023: contoEconomico.risultati && contoEconomico.risultati.utileNetto ? contoEconomico.risultati.utileNetto['2023'] : null, val2024: contoEconomico.risultati && contoEconomico.risultati.utileNetto ? contoEconomico.risultati.utileNetto['2024'] : null, highlight: true }
+    ];
+
+    let html = '<div style="margin: 2rem 0; page-break-inside: avoid;">' +
+      '<h3 style="font-size: 13pt; font-weight: 700; color: #4F566B; margin: 0 0 1rem 0;">Conto Economico</h3>' +
+      '<table style="width: 100%; border-collapse: collapse; font-size: 10pt; background: white; box-shadow: 0 1px 3px rgba(50, 50, 93, 0.05);">' +
+      '<thead>' +
+      '<tr style="background: #635BFF; color: white;">' +
+      '<th style="padding: 1rem; text-align: left; font-weight: 600;">Voce</th>' +
+      '<th style="padding: 1rem; text-align: right; font-weight: 600;">2023</th>' +
+      '<th style="padding: 1rem; text-align: right; font-weight: 600;">2024</th>' +
+      '<th style="padding: 1rem; text-align: right; font-weight: 600;">Δ%</th>' +
+      '</tr>' +
+      '</thead>' +
+      '<tbody>';
+
+    rows.forEach((row, idx) => {
+      const bgColor = row.highlight ? 'rgba(99, 91, 255, 0.05)' : (idx % 2 === 0 ? '#FAFBFC' : 'white');
+      const fontWeight = row.highlight ? '700' : '400';
+      const variation = calcVariation(row.val2024, row.val2023);
+      const varColor = getVariationColor(row.val2024, row.val2023);
+
+      html += '<tr style="background: ' + bgColor + '; border-bottom: 1px solid #E3E8EE;">' +
+        '<td style="padding: 0.75rem 1rem; font-weight: ' + fontWeight + ';">' + row.label + '</td>' +
+        '<td style="padding: 0.75rem 1rem; text-align: right; font-weight: ' + fontWeight + ';">' + formatEuro(row.val2023) + '</td>' +
+        '<td style="padding: 0.75rem 1rem; text-align: right; font-weight: ' + fontWeight + ';">' + formatEuro(row.val2024) + '</td>' +
+        '<td style="padding: 0.75rem 1rem; text-align: right; font-weight: 600; color: ' + varColor + ';">' + variation + '</td>' +
+        '</tr>';
+    });
+
+    html += '</tbody></table></div>';
+    return html;
+  }
+
+  // Generate Stato Patrimoniale table
+  generateStatoPatrimonialeTable() {
+    const sp = this.data.noteTecniche && this.data.noteTecniche.find(n => n.statoPatrimoniale);
+    if (!sp || !sp.statoPatrimoniale) return '';
+
+    const statoPatrimoniale = sp.statoPatrimoniale;
+    const formatEuro = (val) => {
+      if (val === null || val === undefined) return '-';
+      return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 }).format(val);
+    };
+
+    const attivo = statoPatrimoniale.attivo || {};
+    const passivo = statoPatrimoniale.passivo || {};
+
+    const attivoRows = [
+      { label: 'Immobilizzazioni', val2023: attivo.immobilizzazioni ? attivo.immobilizzazioni['2023'] : null, val2024: attivo.immobilizzazioni ? attivo.immobilizzazioni['2024'] : null },
+      { label: 'Attivo Corrente', val2023: attivo.corrente ? attivo.corrente['2023'] : null, val2024: attivo.corrente ? attivo.corrente['2024'] : null },
+      { label: 'Liquidità', val2023: attivo.liquidita ? attivo.liquidita['2023'] : null, val2024: attivo.liquidita ? attivo.liquidita['2024'] : null },
+      { label: 'TOTALE ATTIVO', val2023: attivo.totale ? attivo.totale['2023'] : null, val2024: attivo.totale ? attivo.totale['2024'] : null, total: true }
+    ];
+
+    const passivoRows = [
+      { label: 'Patrimonio Netto', val2023: passivo.patrimonioNetto ? passivo.patrimonioNetto['2023'] : null, val2024: passivo.patrimonioNetto ? passivo.patrimonioNetto['2024'] : null },
+      { label: 'Debiti Finanziari', val2023: passivo.debitiFinanziari ? passivo.debitiFinanziari['2023'] : null, val2024: passivo.debitiFinanziari ? passivo.debitiFinanziari['2024'] : null },
+      { label: 'Debiti Commerciali', val2023: passivo.debitiCommerciali ? passivo.debitiCommerciali['2023'] : null, val2024: passivo.debitiCommerciali ? passivo.debitiCommerciali['2024'] : null },
+      { label: 'TOTALE PASSIVO', val2023: passivo.totale ? passivo.totale['2023'] : null, val2024: passivo.totale ? passivo.totale['2024'] : null, total: true }
+    ];
+
+    let html = '<div style="margin: 2rem 0; page-break-inside: avoid;">' +
+      '<h3 style="font-size: 13pt; font-weight: 700; color: #4F566B; margin: 0 0 1rem 0;">Stato Patrimoniale</h3>' +
+      '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">';
+
+    // ATTIVO table
+    html += '<table style="width: 100%; border-collapse: collapse; font-size: 9pt; background: white; box-shadow: 0 1px 3px rgba(50, 50, 93, 0.05);">' +
+      '<thead>' +
+      '<tr style="background: #00D924; color: white;">' +
+      '<th colspan="3" style="padding: 0.75rem; text-align: left; font-weight: 600; font-size: 10pt;">ATTIVO</th>' +
+      '</tr>' +
+      '<tr style="background: rgba(0, 217, 36, 0.1); color: #1A1F36;">' +
+      '<th style="padding: 0.5rem; text-align: left; font-weight: 600;">Voce</th>' +
+      '<th style="padding: 0.5rem; text-align: right; font-weight: 600;">2023</th>' +
+      '<th style="padding: 0.5rem; text-align: right; font-weight: 600;">2024</th>' +
+      '</tr>' +
+      '</thead>' +
+      '<tbody>';
+
+    attivoRows.forEach((row, idx) => {
+      const bgColor = row.total ? 'rgba(0, 217, 36, 0.1)' : (idx % 2 === 0 ? '#FAFBFC' : 'white');
+      const fontWeight = row.total ? '700' : '400';
+
+      html += '<tr style="background: ' + bgColor + '; border-bottom: 1px solid #E3E8EE;">' +
+        '<td style="padding: 0.5rem; font-weight: ' + fontWeight + ';">' + row.label + '</td>' +
+        '<td style="padding: 0.5rem; text-align: right; font-weight: ' + fontWeight + ';">' + formatEuro(row.val2023) + '</td>' +
+        '<td style="padding: 0.5rem; text-align: right; font-weight: ' + fontWeight + ';">' + formatEuro(row.val2024) + '</td>' +
+        '</tr>';
+    });
+
+    html += '</tbody></table>';
+
+    // PASSIVO table
+    html += '<table style="width: 100%; border-collapse: collapse; font-size: 9pt; background: white; box-shadow: 0 1px 3px rgba(50, 50, 93, 0.05);">' +
+      '<thead>' +
+      '<tr style="background: #DF1B41; color: white;">' +
+      '<th colspan="3" style="padding: 0.75rem; text-align: left; font-weight: 600; font-size: 10pt;">PASSIVO</th>' +
+      '</tr>' +
+      '<tr style="background: rgba(223, 27, 65, 0.1); color: #1A1F36;">' +
+      '<th style="padding: 0.5rem; text-align: left; font-weight: 600;">Voce</th>' +
+      '<th style="padding: 0.5rem; text-align: right; font-weight: 600;">2023</th>' +
+      '<th style="padding: 0.5rem; text-align: right; font-weight: 600;">2024</th>' +
+      '</tr>' +
+      '</thead>' +
+      '<tbody>';
+
+    passivoRows.forEach((row, idx) => {
+      const bgColor = row.total ? 'rgba(223, 27, 65, 0.1)' : (idx % 2 === 0 ? '#FAFBFC' : 'white');
+      const fontWeight = row.total ? '700' : '400';
+
+      html += '<tr style="background: ' + bgColor + '; border-bottom: 1px solid #E3E8EE;">' +
+        '<td style="padding: 0.5rem; font-weight: ' + fontWeight + ';">' + row.label + '</td>' +
+        '<td style="padding: 0.5rem; text-align: right; font-weight: ' + fontWeight + ';">' + formatEuro(row.val2023) + '</td>' +
+        '<td style="padding: 0.5rem; text-align: right; font-weight: ' + fontWeight + ';">' + formatEuro(row.val2024) + '</td>' +
+        '</tr>';
+    });
+
+    html += '</tbody></table>';
+
+    html += '</div></div>';
+    return html;
+  }
+
+  // Generate risk assessment box
+  generateRiskBox() {
+    const risk = this.data.riskAssessment;
+    if (!risk) return '';
+
+    let html = '<div style="background: linear-gradient(135deg, #635BFF 0%, #7C73E6 100%); color: white; border-radius: 12px; padding: 2rem; margin: 2rem 0; box-shadow: 0 4px 12px rgba(99, 91, 255, 0.3); page-break-inside: avoid;">' +
+      '<h3 style="font-size: 14pt; font-weight: 700; margin: 0 0 1.5rem 0;">Valutazione del Rischio</h3>' +
+      '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem;">' +
+      '<div style="text-align: center;">' +
+      '<div style="font-size: 10pt; opacity: 0.9; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px;">Rating</div>' +
+      '<div style="font-size: 32pt; font-weight: 700; line-height: 1;">' + risk.rating + '</div>' +
+      '</div>' +
+      '<div style="text-align: center;">' +
+      '<div style="font-size: 10pt; opacity: 0.9; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px;">Score</div>' +
+      '<div style="font-size: 32pt; font-weight: 700; line-height: 1;">' + risk.score.toFixed(1) + '</div>' +
+      '</div>' +
+      '<div style="text-align: center;">' +
+      '<div style="font-size: 10pt; opacity: 0.9; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px;">Categoria</div>' +
+      '<div style="font-size: 16pt; font-weight: 700; line-height: 1.2; margin-top: 0.5rem;">' + risk.categoryLabel + '</div>' +
+      '</div>' +
+      '</div>';
+
+    if (risk.description) {
+      html += '<div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(255, 255, 255, 0.2); font-size: 10pt; line-height: 1.6; opacity: 0.95;">' +
+        risk.description +
+        '</div>';
     }
 
-    return content;
+    html += '</div>';
+    return html;
   }
 
-  getRatingColor() {
-    const category = this.data.riskAssessment.category;
-    if (category === 'A') return '#24b47e';
-    if (category === 'B') return '#f9b115';
-    return '#f5365c';
+  // Generate Codice della Crisi indicators
+  generateCodiceCrisiIndicators() {
+    const crisi = this.data.codiceCrisi;
+    if (!crisi || !crisi.indices) return '';
+
+    let html = '<div style="margin: 2rem 0; page-break-inside: avoid;">';
+
+    html += '<div style="background: ' + (crisi.status === 'OK' ? 'rgba(0, 217, 36, 0.05)' : 'rgba(255, 176, 32, 0.05)') + '; border: 2px solid ' + (crisi.status === 'OK' ? '#00D924' : '#FFB020') + '; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;">' +
+      '<div style="display: flex; align-items: center; justify-content: space-between;">' +
+      '<div>' +
+      '<div style="font-size: 11pt; font-weight: 700; color: #1A1F36; margin-bottom: 0.25rem;">Status Codice della Crisi</div>' +
+      '<div style="font-size: 9pt; color: #697386;">Valutazione degli indicatori di allerta</div>' +
+      '</div>' +
+      '<div style="font-size: 24pt; font-weight: 700; color: ' + (crisi.status === 'OK' ? '#00D924' : '#FFB020') + ';">' +
+      (crisi.status === 'OK' ? '✓' : '⚠') +
+      '</div>' +
+      '</div>' +
+      '</div>';
+
+    html += '<div style="background: white; border: 1px solid #E3E8EE; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(50, 50, 93, 0.05);">';
+
+    crisi.indices.forEach((idx, i) => {
+      const statusColor = idx.status === 'OK' ? '#00D924' : idx.status === 'WARNING' ? '#FFB020' : '#DF1B41';
+      const statusBg = idx.status === 'OK' ? 'rgba(0, 217, 36, 0.1)' : idx.status === 'WARNING' ? 'rgba(255, 176, 32, 0.1)' : 'rgba(223, 27, 65, 0.1)';
+      const statusSymbol = idx.status === 'OK' ? '✓' : '⚠';
+
+      html += '<div style="display: flex; align-items: center; padding: 1rem; ' + (i > 0 ? 'border-top: 1px solid #E3E8EE;' : '') + '">' +
+        '<div style="width: 36px; height: 36px; border-radius: 50%; background: ' + statusBg + '; color: ' + statusColor + '; display: flex; align-items: center; justify-content: center; font-size: 16pt; font-weight: 700; flex-shrink: 0; margin-right: 1rem;">' +
+        statusSymbol +
+        '</div>' +
+        '<div style="flex: 1;">' +
+        '<div style="font-weight: 600; font-size: 10pt; color: #1A1F36; margin-bottom: 0.25rem;">' + idx.name + '</div>' +
+        '<div style="font-size: 9pt; color: #4F566B;">Valore: <strong>' + idx.value + '</strong> | Soglia: <strong>' + idx.soglia + '</strong></div>' +
+        '</div>' +
+        '<div style="padding: 0.5rem 1rem; background: ' + statusBg + '; color: ' + statusColor + '; border-radius: 6px; font-size: 9pt; font-weight: 600;">' +
+        idx.status +
+        '</div>' +
+        '</div>';
+    });
+
+    html += '</div></div>';
+    return html;
   }
 
-  getProfileColor(colorClass) {
-    const colorMap = {
-      'green': '#24b47e',
-      'light-green': '#5dd39e',
-      'yellow': '#f9b115',
-      'orange': '#fb8833',
-      'red': '#f5365c'
-    };
-    return colorMap[colorClass] || '#475569';
+  // Convert markdown to HTML (simple implementation)
+  markdownToHTML(markdown) {
+    let html = markdown;
+
+    // Headers
+    html = html.replace(/^### (.*$)/gim, '<h3 style="font-size: 12pt; font-weight: 700; color: #4F566B; margin: 1.5rem 0 0.75rem 0;">$1</h3>');
+    html = html.replace(/^## (.*$)/gim, '<h2 style="font-size: 14pt; font-weight: 700; color: #635BFF; margin: 2rem 0 1rem 0;">$1</h2>');
+    html = html.replace(/^# (.*$)/gim, '<h1 style="font-size: 16pt; font-weight: 700; color: #1A1F36; margin: 2rem 0 1rem 0;">$1</h1>');
+
+    // Bold and italic
+    html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+    // Lists - simple implementation
+    const lines = html.split('\n');
+    let inList = false;
+    let result = [];
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (line.match(/^[\-\*]\s+(.+)/)) {
+        if (!inList) {
+          result.push('<ul style="margin: 1rem 0; padding-left: 2rem; list-style: disc; color: #1A1F36;">');
+          inList = true;
+        }
+        result.push('<li>' + line.replace(/^[\-\*]\s+/, '') + '</li>');
+      } else {
+        if (inList) {
+          result.push('</ul>');
+          inList = false;
+        }
+        if (line.trim() && !line.startsWith('<')) {
+          result.push('<p style="margin: 1rem 0; line-height: 1.6; color: #1A1F36;">' + line + '</p>');
+        } else {
+          result.push(line);
+        }
+      }
+    }
+
+    if (inList) {
+      result.push('</ul>');
+    }
+
+    return result.join('\n');
   }
 
-  getIndicatorStyle(colorClass) {
-    if (colorClass === 'positive') return 'positive';
-    if (colorClass === 'negative') return 'negative';
-    if (colorClass === 'warning') return 'warning';
-    return 'normal';
+  // Get formatted date (Month Year)
+  getFormattedDate() {
+    const months = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+                    'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+    const date = new Date();
+    return months[date.getMonth()] + ' ' + date.getFullYear();
   }
 
-  formatCurrency(value) {
-    return new Intl.NumberFormat('it-IT', {
-      style: 'currency',
-      currency: 'EUR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(value);
-  }
-
+  // Get current date for filename
   getCurrentDate() {
-    return new Date().toISOString().split('T')[0];
+    const date = new Date();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return date.getFullYear() + '-' + month + '-' + day;
+  }
+
+  // ===========================
+  // BACKWARD COMPATIBILITY
+  // Legacy method for custom note generation
+  // ===========================
+
+  async generateCustomNote(noteContent, title) {
+    const noteTitle = title || 'Nota Tecnica';
+
+    try {
+      await this.loadLogo();
+
+      let htmlContent = '<div style="font-family: \'Times New Roman\', Times, serif; color: #1A1F36; font-size: 11pt; line-height: 1.6; padding: 2rem;">';
+
+      htmlContent += '<div style="text-align: center; margin-bottom: 2rem; padding-bottom: 2rem; border-bottom: 2px solid #635BFF;">';
+
+      if (this.logoBase64) {
+        htmlContent += '<img src="' + this.logoBase64 + '" alt="Logo" style="width: 100px; height: auto; margin-bottom: 1rem;">';
+      }
+
+      htmlContent += '<h1 style="font-size: 20pt; font-weight: 700; color: #635BFF; margin: 0;">' + noteTitle + '</h1>';
+      htmlContent += '<div style="font-size: 10pt; color: #697386; margin-top: 0.5rem;">' + this.getFormattedDate() + '</div>';
+      htmlContent += '</div>';
+
+      htmlContent += this.markdownToHTML(noteContent);
+      htmlContent += '</div>';
+
+      const tempDiv = document.createElement('div');
+      tempDiv.style.cssText = 'position: absolute; left: -9999px; top: 0;';
+      tempDiv.innerHTML = htmlContent;
+      document.body.appendChild(tempDiv);
+
+      const filename = 'nota-tecnica-' + this.getCurrentDate() + '.pdf';
+
+      const opt = {
+        margin: [15, 15, 15, 15],
+        filename: filename,
+        image: { type: 'jpeg', quality: 0.95 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      await html2pdf().set(opt).from(tempDiv.firstChild).save();
+
+      document.body.removeChild(tempDiv);
+
+      console.log('✅ Custom note generated successfully');
+    } catch (error) {
+      console.error('❌ Error generating custom note:', error);
+      throw error;
+    }
   }
 }
 
-// Esponi globalmente
+// Expose globally
 window.PDFGenerator = PDFGenerator;
